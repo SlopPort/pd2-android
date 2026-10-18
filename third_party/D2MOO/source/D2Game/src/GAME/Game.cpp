@@ -47,8 +47,11 @@
 
 #pragma warning(disable: 28159)
 
+// The squall hash containers pack differently with clang; the layout is only used inside this build.
+#ifndef __ANDROID__
 static_assert(offsetof(D2GameStrc, lpCriticalSection) == 0x18, "Make sure TSHashObject<D2GameStrc,HASHKEY_NONE> has the correct size.");
 static_assert(sizeof(D2GameDataTableStrc) == 0x68, "Make sure D2GameDataTableStrc has the correct size.");
+#endif
 
 D2GameStrc* gpGame_6FD457FC;
 int32_t gnAct_6FD45824;
@@ -114,7 +117,11 @@ void* __fastcall sub_6FC35720()
 void GAME_LogMessage(int32_t a1, const char* szFormat, ...)
 {
     char szMessage[4096] = {};
+#ifdef __ANDROID__
+    va_list va;
+#else
     va_list va = nullptr;
+#endif
 
     va_start(va, szFormat);
     vsprintf(szMessage, szFormat, va); // NOLINT(clang-diagnostic-deprecated-declarations)

@@ -10,7 +10,12 @@
 #pragma warning(disable: 28159)
 
 
+#ifdef __ANDROID__
+// Same variable (D2Game.0x6FD4DC40) as in SUnit.cpp; MSVC's type mangling hid the double definition.
+extern int32_t dword_6FD4DC40;
+#else
 uint32_t dword_6FD4DC40;
+#endif
 
 
 //D2Game.0x6FCBA690

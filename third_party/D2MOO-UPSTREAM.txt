@@ -1,1 +1,2 @@
 D2MOO upstream commit 1fe7444dc2cfb6bf1c2934b8901e5699a4c36913 (Mon Oct 12 09:23:50 2026 +0200)
+external/squall: https://github.com/Lectem/squall (public domain) at 28c005cd07abea12279a3e7c38a53c78b472bafa

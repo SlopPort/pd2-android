@@ -79,3 +79,7 @@ FILE* d2_fopen(const char* name, const char* mode) {
 	if (strchr(name, '\\')) return fopen(resolve(name).c_str(), mode);
 	return fopen(name, mode);
 }
+
+static std::string gSaveDir = "/data/local/tmp/d2save/";
+extern "C" void d2native_set_save_dir(const char* dir) { gSaveDir = dir; }
+const char* d2native_save_dir() { return gSaveDir.c_str(); }

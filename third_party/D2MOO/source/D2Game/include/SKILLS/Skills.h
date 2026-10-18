@@ -83,7 +83,11 @@ struct D2EffectStrc
 	int32_t nParam;
 	int32_t nSkillLevel;
 	int32_t unk0x1C;
+#ifdef __ANDROID__
+	D2AnyFnPtr pfAreaEffect;
+#else
 	void* pfAreaEffect;
+#endif
 };
 
 struct D2MonSkillInfoStrc
@@ -264,7 +268,12 @@ void __fastcall sub_6FD14770(D2GameStrc* pGame, int32_t nFlags, D2UnitStrc* pUni
 //D2Game.0x6FD149B0
 void __fastcall sub_6FD149B0(D2GameStrc* pGame, D2EffectStrc* pEffect);
 //D2Game.0x6FD14BD0
-void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, void* pfAreaEffect);
+void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel,
+#ifdef __ANDROID__
+	D2AnyFnPtr pfAreaEffect);
+#else
+	void* pfAreaEffect);
+#endif
 //D2Game.0x6FD14C30
 void __fastcall sub_6FD14C30(D2UnitStrc* pUnit);
 //D2Game.0x6FD14C60

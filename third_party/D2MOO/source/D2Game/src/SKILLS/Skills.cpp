@@ -3741,7 +3741,11 @@ void __fastcall sub_6FD149B0(D2GameStrc* pGame, D2EffectStrc* pEffect)
 }
 
 //D2Game.0x6FD14BD0
+#ifdef __ANDROID__
+void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, D2AnyFnPtr pfAreaEffect)
+#else
 void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, void* pfAreaEffect)
+#endif
 {
     D2EffectStrc effect = {};
 

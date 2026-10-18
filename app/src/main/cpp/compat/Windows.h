@@ -64,7 +64,8 @@ typedef struct { LONG x, y; } POINT;
 #define _Notnull_
 #define _Maybenull_
 #include <pthread.h>
-typedef struct { pthread_mutex_t m; } CRITICAL_SECTION, *LPCRITICAL_SECTION;
+// Same 24-byte size as the Win32 structure, so D2 structs that embed it keep their layout.
+typedef struct { pthread_mutex_t m; char pad[24 - sizeof(pthread_mutex_t)]; } CRITICAL_SECTION, *LPCRITICAL_SECTION;
 typedef struct { ULONG_PTR Internal, InternalHigh; DWORD Offset, OffsetHigh; HANDLE hEvent; } OVERLAPPED, *LPOVERLAPPED;
 #define wsprintfA sprintf
 #define wsprintf sprintf
@@ -75,7 +76,6 @@ typedef struct { DWORD dwLowDateTime, dwHighDateTime; } FILETIME, *LPFILETIME;
 typedef struct { HDC hdc; BOOL fErase; RECT rcPaint; BOOL fRestore, fIncUpdate; BYTE rgbReserved[32]; } PAINTSTRUCT, *LPPAINTSTRUCT;
 #include <algorithm>
 #include <ctime>
-#define sprintf_s snprintf
 #define _snprintf snprintf
 #define _strcmpi strcasecmp
 FILE* d2_fopen(const char* name, const char* mode); // resolves D2 "DATA\..." paths under the data root
@@ -100,7 +100,20 @@ template<class T> inline T InterlockedDecrement(volatile T* p){ return __sync_su
 template<class T> inline T InterlockedExchange(volatile T* p, T v){ return __sync_lock_test_and_set(p,v);} 
 inline BOOL IsBadCodePtr(FARPROC p){ return p == nullptr; }
 // MSVC lets function pointers convert to void* implicitly in table initializers; clang does not.
-struct D2AnyFnPtr { void* p; D2AnyFnPtr() : p(nullptr) {} D2AnyFnPtr(std::nullptr_t) : p(nullptr) {} D2AnyFnPtr(int) : p(nullptr) {} D2AnyFnPtr(long) : p(nullptr) {} template<class T> D2AnyFnPtr(T* f) : p((void*)f) {} template<class T> operator T*() const { return (T*)p; } };
+struct D2AnyFnPtr { void* p; D2AnyFnPtr() : p(nullptr) {} D2AnyFnPtr(std::nullptr_t) : p(nullptr) {} D2AnyFnPtr(int) : p(nullptr) {} D2AnyFnPtr(long) : p(nullptr) {} template<class T> D2AnyFnPtr(T* f) : p((void*)f) {} template<class T> operator T*() const { return (T*)p; } bool operator!() const { return !p; } };
 inline char* _itoa(int v, char* b, int r){ if(r==16) sprintf(b,"%x",v); else sprintf(b,"%d",v); return b; }
 inline char* _ultoa(unsigned long v, char* b, int r){ if(r==16) sprintf(b,"%lx",v); else sprintf(b,"%lu",v); return b; }
 inline void Sleep(DWORD ms){ timespec t{(time_t)(ms/1000),(long)(ms%1000)*1000000L}; nanosleep(&t,nullptr); }
+
+// sprintf_s: both the explicit-size and the array forms used by D2MOO.
+#include <cstdarg>
+inline int sprintf_s(char* b, size_t n, const char* f, ...) { va_list a; va_start(a, f); int r = vsnprintf(b, n, f, a); va_end(a); return r; }
+template<size_t N> inline int sprintf_s(char (&b)[N], const char* f, ...) { va_list a; va_start(a, f); int r = vsnprintf(b, N, f, a); va_end(a); return r; }
+typedef union { struct { DWORD LowPart; LONG HighPart; }; LONGLONG QuadPart; } LARGE_INTEGER;
+typedef struct _SYSTEMTIME { WORD wYear, wMonth, wDayOfWeek, wDay, wHour, wMinute, wSecond, wMilliseconds; } SYSTEMTIME, *LPSYSTEMTIME;
+inline void GetLocalTime(LPSYSTEMTIME t) { time_t now = time(nullptr); struct tm l; localtime_r(&now, &l); t->wYear = (WORD)(l.tm_year + 1900); t->wMonth = (WORD)(l.tm_mon + 1); t->wDayOfWeek = (WORD)l.tm_wday; t->wDay = (WORD)l.tm_mday; t->wHour = (WORD)l.tm_hour; t->wMinute = (WORD)l.tm_min; t->wSecond = (WORD)l.tm_sec; t->wMilliseconds = 0; }
+inline char* _strrev(char* s) { size_t n = strlen(s); for (size_t i = 0; i < n / 2; ++i) { char c = s[i]; s[i] = s[n - 1 - i]; s[n - 1 - i] = c; } return s; }
+typedef DWORD (*LPTHREAD_START_ROUTINE)(LPVOID);
+inline BOOL QueryPerformanceCounter(LARGE_INTEGER* v) { timespec t; clock_gettime(CLOCK_MONOTONIC, &t); v->QuadPart = (LONGLONG)t.tv_sec * 1000000000LL + t.tv_nsec; return TRUE; }
+inline BOOL QueryPerformanceFrequency(LARGE_INTEGER* v) { v->QuadPart = 1000000000LL; return TRUE; }
+template<class T> inline T InterlockedCompareExchange(volatile T* p, T exchange, T comparand) { return __sync_val_compare_and_swap(p, comparand, exchange); }

@@ -123,6 +123,97 @@ index 3043f3e..0ddff4f 100644
  
  	if (!dwAutomapLevelType || nStart == -1)
  	{
+diff --git a/source/D2Game/include/SKILLS/Skills.h b/source/D2Game/include/SKILLS/Skills.h
+index 91b696a..9def8f5 100644
+--- a/source/D2Game/include/SKILLS/Skills.h
++++ b/source/D2Game/include/SKILLS/Skills.h
+@@ -83,7 +83,11 @@ struct D2EffectStrc
+ 	int32_t nParam;
+ 	int32_t nSkillLevel;
+ 	int32_t unk0x1C;
++#ifdef __ANDROID__
++	D2AnyFnPtr pfAreaEffect;
++#else
+ 	void* pfAreaEffect;
++#endif
+ };
+ 
+ struct D2MonSkillInfoStrc
+@@ -264,7 +268,12 @@ void __fastcall sub_6FD14770(D2GameStrc* pGame, int32_t nFlags, D2UnitStrc* pUni
+ //D2Game.0x6FD149B0
+ void __fastcall sub_6FD149B0(D2GameStrc* pGame, D2EffectStrc* pEffect);
+ //D2Game.0x6FD14BD0
+-void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, void* pfAreaEffect);
++void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel,
++#ifdef __ANDROID__
++	D2AnyFnPtr pfAreaEffect);
++#else
++	void* pfAreaEffect);
++#endif
+ //D2Game.0x6FD14C30
+ void __fastcall sub_6FD14C30(D2UnitStrc* pUnit);
+ //D2Game.0x6FD14C60
+diff --git a/source/D2Game/src/GAME/Game.cpp b/source/D2Game/src/GAME/Game.cpp
+index 4bff91b..91a20c0 100644
+--- a/source/D2Game/src/GAME/Game.cpp
++++ b/source/D2Game/src/GAME/Game.cpp
+@@ -47,8 +47,11 @@
+ 
+ #pragma warning(disable: 28159)
+ 
++// The squall hash containers pack differently with clang; the layout is only used inside this build.
++#ifndef __ANDROID__
+ static_assert(offsetof(D2GameStrc, lpCriticalSection) == 0x18, "Make sure TSHashObject<D2GameStrc,HASHKEY_NONE> has the correct size.");
+ static_assert(sizeof(D2GameDataTableStrc) == 0x68, "Make sure D2GameDataTableStrc has the correct size.");
++#endif
+ 
+ D2GameStrc* gpGame_6FD457FC;
+ int32_t gnAct_6FD45824;
+@@ -114,7 +117,11 @@ void* __fastcall sub_6FC35720()
+ void GAME_LogMessage(int32_t a1, const char* szFormat, ...)
+ {
+     char szMessage[4096] = {};
++#ifdef __ANDROID__
++    va_list va;
++#else
+     va_list va = nullptr;
++#endif
+ 
+     va_start(va, szFormat);
+     vsprintf(szMessage, szFormat, va); // NOLINT(clang-diagnostic-deprecated-declarations)
+diff --git a/source/D2Game/src/PLAYER/PlayerList.cpp b/source/D2Game/src/PLAYER/PlayerList.cpp
+index f83fa57..a1a0599 100644
+--- a/source/D2Game/src/PLAYER/PlayerList.cpp
++++ b/source/D2Game/src/PLAYER/PlayerList.cpp
+@@ -10,7 +10,12 @@
+ #pragma warning(disable: 28159)
+ 
+ 
++#ifdef __ANDROID__
++// Same variable (D2Game.0x6FD4DC40) as in SUnit.cpp; MSVC's type mangling hid the double definition.
++extern int32_t dword_6FD4DC40;
++#else
+ uint32_t dword_6FD4DC40;
++#endif
+ 
+ 
+ //D2Game.0x6FCBA690
+diff --git a/source/D2Game/src/SKILLS/Skills.cpp b/source/D2Game/src/SKILLS/Skills.cpp
+index 32755f1..c90d582 100644
+--- a/source/D2Game/src/SKILLS/Skills.cpp
++++ b/source/D2Game/src/SKILLS/Skills.cpp
+@@ -3741,7 +3741,11 @@ void __fastcall sub_6FD149B0(D2GameStrc* pGame, D2EffectStrc* pEffect)
+ }
+ 
+ //D2Game.0x6FD14BD0
++#ifdef __ANDROID__
++void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, D2AnyFnPtr pfAreaEffect)
++#else
+ void __fastcall sub_6FD14BD0(D2GameStrc* pGame, int32_t nFlags, int32_t nX, int32_t nY, D2UnitStrc* pUnit, int32_t nSkillId, int32_t nSkillLevel, void* pfAreaEffect)
++#endif
+ {
+     D2EffectStrc effect = {};
+ 
 diff --git a/source/Fog/include/Fog.h b/source/Fog/include/Fog.h
 index ad15c43..61e48ec 100644
 --- a/source/Fog/include/Fog.h
