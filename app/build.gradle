@@ -1,0 +1,21 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'pl.d2port'
+    compileSdk 35
+    ndkVersion '27.2.12479018'
+    defaultConfig {
+        applicationId 'pl.d2port'
+        minSdk 26
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-drlg'
+        // D2 game structures are 32-bit and packed, so the core is built for 32-bit ARM only.
+        ndk { abiFilters 'armeabi-v7a' }
+        externalNativeBuild { cmake { arguments '-DANDROID_STL=c++_static' } }
+    }
+    externalNativeBuild { cmake { path 'src/main/cpp/CMakeLists.txt'; version '3.22.1' } }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}

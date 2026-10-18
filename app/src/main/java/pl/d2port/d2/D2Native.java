@@ -1,0 +1,50 @@
+package pl.d2port.d2;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import pl.d2port.data.GameData;
+
+/**
+ * Native D2 core: D2MOO's D2Common (original Diablo II 1.10 game code) compiled for Android,
+ * with the PD2 tables. Game files are read through {@link GameData} from the user's MPQs.
+ * One act at a time; all calls must come from the same worker thread.
+ */
+public final class D2Native {
+    static { System.loadLibrary("d2native"); }
+    private D2Native() {}
+
+    private static GameData data;
+    private static final int FILE_LIMIT = 64 * 1024 * 1024;
+
+    /** Called from native code for every game file; null when absent. */
+    static byte[] readFile(String path) {
+        GameData d = data;
+        if (d == null) return null;
+        try { return d.read(path, FILE_LIMIT).bytes; }
+        catch (FileNotFoundException ex) { return null; }
+        catch (IOException ex) { android.util.Log.w("D2Native", "read " + path + ": " + ex.getMessage()); return null; }
+    }
+
+    /** Loads all data tables (once per process). */
+    public static synchronized boolean init(GameData source) {
+        data = source;
+        return loadTables();
+    }
+
+    private static native boolean loadTables();
+    /** Builds the whole act with the original DRLG; returns a handle, 0 on failure. */
+    public static native long allocAct(int act, int seed, int difficulty);
+    public static native void freeAct(long act);
+    /** {drlgType, levelType, posX, posY, width, height, rooms} in tiles, or null. */
+    public static native int[] levelInfo(long act, int level);
+    /** Rooms of a generated level as {x, y, width, height} tile rectangles, flattened. */
+    public static native int[] levelRooms(long act, int level);
+    /** Activates the level's rooms; per tile {layer (0 floor, 1 wall, 2 roof), tileX, tileY, orientation, imageKey, flags}. */
+    public static native int[] levelTiles(long act, int level);
+    /** Loads data/global/palette/act{act+1}/pal.dat for tile decoding. */
+    public static native boolean loadPalette(int act);
+    /** {width, height, left, top, argb...} relative to the tile anchor, or null. */
+    public static native int[] tileImage(int key);
+    /** D2 collision flags per subtile over the level rectangle (width*5 per row); 0xFFFF outside rooms. */
+    public static native short[] levelCollision(long act, int level);
+}

@@ -1,0 +1,1 @@
+NameOfModulesToPatch 256 { L"D2Game.dll;D2Client.dll\0" }

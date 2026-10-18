@@ -1,0 +1,112 @@
+diff --git a/source/D2Common/include/Drlg/D2DrlgDrlg.h b/source/D2Common/include/Drlg/D2DrlgDrlg.h
+index 8ae09e0..13e2294 100644
+--- a/source/D2Common/include/Drlg/D2DrlgDrlg.h
++++ b/source/D2Common/include/Drlg/D2DrlgDrlg.h
+@@ -461,7 +461,11 @@ struct D2DrlgLevelStrc
+ 
+ struct D2DrlgLinkStrc
+ {
++#ifdef __ANDROID__
++	D2AnyFnPtr pfLinker;						//0x00
++#else
+ 	void* pfLinker;								//0x00
++#endif
+ 	int32_t nLevel;								//0x04
+ 	int32_t nLevelLink;							//0x08
+ 	int32_t nLevelLinkEx;						//0x0C
+diff --git a/source/D2Common/src/DataTbls/LevelsTbls.cpp b/source/D2Common/src/DataTbls/LevelsTbls.cpp
+index 3043f3e..0ddff4f 100644
+--- a/source/D2Common/src/DataTbls/LevelsTbls.cpp
++++ b/source/D2Common/src/DataTbls/LevelsTbls.cpp
+@@ -8,6 +8,14 @@
+ #include <D2CMP.h>
+ 
+ 
++// PD2 has more automap level types than the 36 slots of the 1.10 table, so Android keeps a larger copy.
++#ifdef __ANDROID__
++static D2AutomapRandStrc gAutoMapRandPd2[64];
++#define AUTOMAP_RAND gAutoMapRandPd2
++#else
++#define AUTOMAP_RAND sgptDataTables->pAutoMapRand
++#endif
++
+ static const char* gszAutomapLevelNames[] =
+ {
+ 	"None",
+@@ -1047,11 +1055,23 @@ void __fastcall DATATBLS_LoadAutomapTxt(HD2ARCHIVE hArchive)
+ 	for (int i = 0; i < nAutomapTxtRecordCount; ++i)
+ 	{
+ 		nLevelCounter = 0;
++#ifdef __ANDROID__
++		// PD2 adds level types past the 1.10 list and names them by number ("36", "37", ...).
++		while (nLevelCounter < ARRAY_SIZE(gszAutomapLevelNames) && 0 != strcmp(pAutomapTxt[i].szLevelName, gszAutomapLevelNames[nLevelCounter]))
++		{
++			++nLevelCounter;
++		}
++		if (nLevelCounter >= ARRAY_SIZE(gszAutomapLevelNames))
++		{
++			nLevelCounter = atoi(pAutomapTxt[i].szLevelName);
++		}
++#else
+ 		while (0 != strcmp(pAutomapTxt[i].szLevelName, gszAutomapLevelNames[nLevelCounter]))
+ 		{
+ 			++nLevelCounter;
+ 			D2_ASSERT(nLevelCounter < ARRAY_SIZE(gszAutomapLevelNames));
+ 		}
++#endif
+ 		pAutomap[i].dwAutomapLevelType = nLevelCounter;
+ 
+ 		nTileCounter = 0;
+@@ -1088,14 +1108,14 @@ void __fastcall DATATBLS_LoadAutomapTxt(HD2ARCHIVE hArchive)
+ 	sgptDataTables->pAutoMap = pAutomap;
+ 	sgptDataTables->nAutoMap = nAutomapTxtRecordCount;
+ 
+-	memset(sgptDataTables->pAutoMapRand, -1, sizeof(sgptDataTables->pAutoMapRand));
++	memset(AUTOMAP_RAND, -1, sizeof(AUTOMAP_RAND));
+ 
+ 	nCounter = 0;
+ 	while (nCounter < nAutomapTxtRecordCount)
+ 	{
+ 		nAutomapLevelType = pAutomap[nCounter].dwAutomapLevelType;
+ 
+-		sgptDataTables->pAutoMapRand[nAutomapLevelType].nStart = nCounter;
++		AUTOMAP_RAND[nAutomapLevelType].nStart = nCounter;
+ 
+ 		while (nCounter + 1 < nAutomapTxtRecordCount)
+ 		{
+@@ -1109,7 +1129,7 @@ void __fastcall DATATBLS_LoadAutomapTxt(HD2ARCHIVE hArchive)
+ 
+ 		++nCounter;
+ 
+-		sgptDataTables->pAutoMapRand[nAutomapLevelType].nEnd = nCounter;
++		AUTOMAP_RAND[nAutomapLevelType].nEnd = nCounter;
+ 	}
+ }
+ 
+@@ -1121,8 +1141,8 @@ int __fastcall DATATBLS_GetAutomapCellId(uint32_t dwAutomapLevelType, uint32_t d
+ 	int nCels = 0;
+ 	int i = 0;
+ 
+-	nStart = sgptDataTables->pAutoMapRand[dwAutomapLevelType].nStart;
+-	nEnd = sgptDataTables->pAutoMapRand[dwAutomapLevelType].nEnd;
++	nStart = AUTOMAP_RAND[dwAutomapLevelType].nStart;
++	nEnd = AUTOMAP_RAND[dwAutomapLevelType].nEnd;
+ 
+ 	if (!dwAutomapLevelType || nStart == -1)
+ 	{
+diff --git a/source/Fog/include/Fog.h b/source/Fog/include/Fog.h
+index ad15c43..61e48ec 100644
+--- a/source/Fog/include/Fog.h
++++ b/source/Fog/include/Fog.h
+@@ -86,7 +86,11 @@ struct D2BinFieldStrc
+ 	D2C_TxtFieldTypes nFieldType;	//0x04
+ 	int32_t nFieldLength;			//0x08
+ 	int32_t nFieldOffset;			//0x0C
++#ifdef __ANDROID__
++	D2AnyFnPtr pLinkField;			//0x10
++#else
+ 	void* pLinkField;				//0x10
++#endif
+ };
+ 
+ struct D2UnkExcelStrc
