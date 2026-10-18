@@ -47,4 +47,14 @@ public final class D2Native {
     public static native int[] tileImage(int key);
     /** D2 collision flags per subtile over the level rectangle (width*5 per row); 0xFFFF outside rooms. */
     public static native short[] levelCollision(long act, int level);
+
+    /** Creates the player (charstats class 0-6) at the act's town spawn location. */
+    public static native boolean spawnPlayer(long act, int charClass);
+    public static native void setRun(boolean run);
+    /** Walk/run command towards a subtile, as a click in D2; false when no path. */
+    public static native boolean moveTo(int x, int y);
+    /** One game frame (D2 runs 25 frames per second). */
+    public static native void tick();
+    /** {subtileX, subtileY, precisionX, precisionY (16.16), animMode, direction, levelId} */
+    public static native int[] playerState();
 }

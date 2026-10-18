@@ -239,3 +239,32 @@ extern "C" JNIEXPORT jshortArray JNICALL Java_pl_d2port_d2_D2Native_levelCollisi
 	env->SetShortArrayRegion(out, 0, (jsize)m.size(), m.data());
 	return out;
 }
+
+// ------------------------------------------------------------------ game (player, 25 fps frames)
+
+#include "game.h"
+
+extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_spawnPlayer(JNIEnv* env, jclass, jlong act, jint charClass) {
+	EnvScope scope(env);
+	return d2game_spawn((D2DrlgActStrc*)(intptr_t)act, charClass) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_setRun(JNIEnv*, jclass, jboolean run) { d2game_set_run(run); }
+
+extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_moveTo(JNIEnv* env, jclass, jint x, jint y) {
+	EnvScope scope(env);
+	return d2game_move_to(x, y) ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_tick(JNIEnv* env, jclass) {
+	EnvScope scope(env);
+	d2game_tick();
+}
+
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_playerState(JNIEnv* env, jclass) {
+	jint s[7];
+	d2game_player_state((int*)s);
+	jintArray out = env->NewIntArray(7);
+	env->SetIntArrayRegion(out, 0, 7, s);
+	return out;
+}

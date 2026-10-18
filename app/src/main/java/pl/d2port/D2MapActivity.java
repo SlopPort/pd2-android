@@ -47,7 +47,7 @@ public final class D2MapActivity extends Activity {
         worker.execute(() -> {
             try {
                 InstallationStore store = new InstallationStore(new File(getFilesDir(), "installation"));
-                importPending(store);
+                DataImport.importPending(this, store);
                 if (store.current() == null) throw new java.io.IOException("Brak instalacji MPQ");
                 session = store.open();
                 long t = System.nanoTime();
@@ -59,28 +59,6 @@ public final class D2MapActivity extends Activity {
                 runOnUiThread(() -> status.setText("Błąd: " + ex.getMessage()));
             }
         });
-    }
-
-    /** PD2 load order: PD2 archives over expansion over classic. */
-    private static final String[] ORDER = {"pd2maps.mpq", "pd2data.mpq", "pd2assets.mpq", "pd2monchars.mpq", "patch_d2.mpq", "d2exp.mpq", "d2char.mpq", "d2data.mpq"};
-
-    /** Dev import: MPQs copied by adb to Android/data/pl.d2port/files/import are added, then the PD2 order is applied. */
-    private void importPending(InstallationStore store) throws java.io.IOException {
-        File dir = new File(getExternalFilesDir(null), "import");
-        File[] files = dir.listFiles((d, n) -> n.toLowerCase(java.util.Locale.ROOT).endsWith(".mpq"));
-        if (files == null || files.length == 0) return;
-        for (File f : files) {
-            runOnUiThread(() -> status.setText("Import " + f.getName() + "…"));
-            try (java.io.InputStream in = new java.io.FileInputStream(f)) { store.add(f.getName().toLowerCase(java.util.Locale.ROOT), in); }
-            if (!f.delete()) android.util.Log.w("D2Native", "could not delete " + f);
-        }
-        java.util.List<String> names = new java.util.ArrayList<>();
-        java.util.List<String> present = new java.util.ArrayList<>();
-        for (InstallationManifest.Archive a : store.current().archives) present.add(a.name);
-        for (String n : ORDER) if (present.remove(n)) names.add(n);
-        names.addAll(present);
-        store.reorder(names);
-        android.util.Log.i("D2Native", "installation order " + names);
     }
 
     private void addButton(LinearLayout bar, String text, Runnable action) {

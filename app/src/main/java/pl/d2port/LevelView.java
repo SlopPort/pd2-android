@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /** Draws one level as D2 laid it out: isometric tiles (160x80), optional collision overlay. */
-final class LevelView extends View {
+class LevelView extends View {
     static final class Level {
         int[] tiles;                       // see D2Native.levelTiles
         Map<Integer, Bitmap> images = new HashMap<>();
@@ -25,12 +25,17 @@ final class LevelView extends View {
     private Level level;
     private float camX, camY, lastX, lastY, scale = 0.5f;
     boolean showCollision;
+    /** Hero position in subtiles (with fraction) or NaN; when set the camera follows it. */
+    volatile float heroX = Float.NaN, heroY = Float.NaN;
+    private final Paint hero = new Paint(), heroRing = new Paint();
     private final Paint paint = new Paint(), red = new Paint();
 
     LevelView(Context c) {
         super(c);
         paint.setFilterBitmap(false);
         red.setColor(0x80ff2020);
+        hero.setColor(0xffe0c070);
+        heroRing.setColor(0xff000000); heroRing.setStyle(Paint.Style.STROKE); heroRing.setStrokeWidth(3);
     }
 
     void setLevel(Level l) {
@@ -42,6 +47,7 @@ final class LevelView extends View {
     }
 
     @Override public boolean onTouchEvent(MotionEvent e) {
+        if (!Float.isNaN(heroX)) return false; // in game the stick view handles touches
         if (e.getAction() == MotionEvent.ACTION_DOWN) { lastX = e.getX(); lastY = e.getY(); return true; }
         if (e.getAction() == MotionEvent.ACTION_MOVE) {
             camX -= (e.getX() - lastX) / scale; camY -= (e.getY() - lastY) / scale;
@@ -54,6 +60,11 @@ final class LevelView extends View {
         c.drawColor(Color.BLACK);
         Level l = level;
         if (l == null || l.tiles == null) return;
+        float hx = heroX, hy = heroY;
+        if (!Float.isNaN(hx)) {
+            camX = (hx - hy) * 16f; camY = (hx + hy) * 8f;
+            scale = getHeight() / 600f; // the game shows what D2 shows at 800x600
+        }
         c.save();
         c.translate(getWidth() / 2f, getHeight() / 2f);
         c.scale(scale, scale);
@@ -62,6 +73,13 @@ final class LevelView extends View {
         int[] t = l.tiles;
         for (int i = 0; i + 5 < t.length; i += 6) if (t[i] == 0) drawTile(c, l, i, viewW, viewH);
         for (Integer i : l.order) drawTile(c, l, i, viewW, viewH);
+        if (!Float.isNaN(hx)) {
+            // Placeholder for the hero sprite: marker at the unit's subtile position.
+            float sx = (hx - hy) * 16f, sy = (hx + hy) * 8f;
+            c.drawOval(sx - 14, sy - 7, sx + 14, sy + 7, heroRing);
+            c.drawRect(sx - 8, sy - 70, sx + 8, sy, hero);
+            c.drawRect(sx - 8, sy - 70, sx + 8, sy, heroRing);
+        }
         if (showCollision && l.collision != null) {
             int w = l.width * 5;
             for (int y = 0; y < l.height * 5; y++)
@@ -86,6 +104,27 @@ final class LevelView extends View {
         float x = (t[i + 1] - t[i + 2]) * 80f - 80 + o[0], y = (t[i + 1] + t[i + 2]) * 40f + o[1];
         if (x > camX + viewW || x + b.getWidth() < camX - viewW || y > camY + viewH || y + b.getHeight() < camY - viewH) return;
         c.drawBitmap(b, x, y, paint);
+    }
+
+    /** Builds the drawable level from the native core (call on the native thread). */
+    static Level load(long act, int levelId) {
+        int[] i = pl.d2port.d2.D2Native.levelInfo(act, levelId);
+        if (i == null) return null;
+        Level lv = new Level();
+        lv.posX = i[2]; lv.posY = i[3]; lv.width = i[4]; lv.height = i[5];
+        lv.tiles = pl.d2port.d2.D2Native.levelTiles(act, levelId);
+        lv.collision = pl.d2port.d2.D2Native.levelCollision(act, levelId);
+        if (lv.tiles == null) lv.tiles = new int[0];
+        for (int k = 0; k + 5 < lv.tiles.length; k += 6) {
+            int key = lv.tiles[k + 4];
+            if (lv.images.containsKey(key)) continue;
+            int[] img = pl.d2port.d2.D2Native.tileImage(key);
+            if (img == null) { lv.images.put(key, null); continue; }
+            lv.images.put(key, Bitmap.createBitmap(img, 4, img[0], img[0], img[1], Bitmap.Config.ARGB_8888));
+            lv.offsets.put(key, new int[]{img[2], img[3]});
+        }
+        sortDepth(lv);
+        return lv;
     }
 
     static void sortDepth(Level l) {
