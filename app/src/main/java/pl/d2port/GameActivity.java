@@ -35,6 +35,7 @@ public final class GameActivity extends Activity {
     private LevelView view;
     private TextView status;
     private Stick stick;
+    private final HeroLook look = new HeroLook("BA", "HTH");
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -97,6 +98,11 @@ public final class GameActivity extends Activity {
             }
             D2Native.tick();
             int[] s = D2Native.playerState();
+            HeroLook.Anim anim = look.get(s[4], s[5]);
+            if (anim.frames != null && anim.frames.length > 0) {
+                view.heroFrame = anim.frames[Math.max(0, Math.min(anim.frames.length - 1, s[7]))];
+                view.heroOffX = anim.offX; view.heroOffY = anim.offY;
+            }
             view.heroX = s[2] / 65536f; view.heroY = s[3] / 65536f;
             view.postInvalidateOnAnimation();
             if (s[6] != levelShown && s[6] != 0) showLevelOfPlayer();

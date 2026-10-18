@@ -262,9 +262,91 @@ extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_tick(JNIEnv* env, j
 }
 
 extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_playerState(JNIEnv* env, jclass) {
-	jint s[7];
+	jint s[9];
 	d2game_player_state((int*)s);
-	jintArray out = env->NewIntArray(7);
-	env->SetIntArrayRegion(out, 0, 7, s);
+	jintArray out = env->NewIntArray(9);
+	env->SetIntArrayRegion(out, 0, 9, s);
 	return out;
+}
+
+// ------------------------------------------------------------------ unit graphics (COF + DCC)
+
+#include "dcc.h"
+#include <map>
+
+namespace {
+const char* kComponents[16] = {"HD", "TR", "LG", "RA", "LA", "RH", "LH", "SH", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"};
+std::map<std::string, std::vector<uint8_t>> gFileCache;
+
+const std::vector<uint8_t>* gameFile(const std::string& path) {
+	auto it = gFileCache.find(path);
+	if (it != gFileCache.end()) return it->second.empty() ? nullptr : &it->second;
+	size_t n = 0;
+	void* data = ARCHIVE_AllocateBufferAndReadFile(nullptr, path.c_str(), &n, __FILE__, __LINE__);
+	std::vector<uint8_t>& v = gFileCache[path];
+	if (data) v.assign((uint8_t*)data, (uint8_t*)data + n);
+	free(data);
+	return v.empty() ? nullptr : &v;
+}
+}
+
+// Composite animation of a character/monster token for one COF direction:
+// {frames, animRate, cofDirs, boxX, boxY, width, height, argb frames...}; box relative to the foot point.
+// armor: 16 armour/weapon codes per component ("LIT", "HAX", ...), empty for none.
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_unitAnimation(JNIEnv* env, jclass, jstring jtoken, jstring jmode, jstring jwclass, jobjectArray jarmor, jint dir) {
+	EnvScope scope(env);
+	const char* tk = env->GetStringUTFChars(jtoken, nullptr); std::string token = tk; env->ReleaseStringUTFChars(jtoken, tk);
+	const char* md = env->GetStringUTFChars(jmode, nullptr); std::string mode = md; env->ReleaseStringUTFChars(jmode, md);
+	const char* wc = env->GetStringUTFChars(jwclass, nullptr); std::string wclass = wc; env->ReleaseStringUTFChars(jwclass, wc);
+	std::string armor[16];
+	for (int i = 0; i < 16 && i < env->GetArrayLength(jarmor); ++i) {
+		jstring s = (jstring)env->GetObjectArrayElement(jarmor, i);
+		if (s) { const char* c = env->GetStringUTFChars(s, nullptr); armor[i] = c; env->ReleaseStringUTFChars(s, c); }
+	}
+	std::string base = "DATA\\GLOBAL\\CHARS\\" + token + "\\";
+	const std::vector<uint8_t>* cofData = gameFile(base + "COF\\" + token + mode + wclass + ".COF");
+	Cof cof;
+	if (!cofData || !cof_parse(cofData->data(), cofData->size(), cof) || dir < 0 || dir >= cof.dirs) return nullptr;
+
+	// Decode every layer of this direction.
+	std::vector<DccDirection> layerDir(16);
+	std::vector<bool> present(16, false);
+	int x0 = INT32_MAX, y0 = INT32_MAX, x1 = INT32_MIN, y1 = INT32_MIN;
+	for (const CofLayer& l : cof.layer) {
+		if (l.component >= 16 || armor[l.component].empty()) continue;
+		std::string comp = kComponents[l.component];
+		std::string path = base + comp + "\\" + token + comp + armor[l.component] + mode + l.weaponClass + ".DCC";
+		const std::vector<uint8_t>* dcc = gameFile(path);
+		if (!dcc || !dcc_decode_direction(dcc->data(), dcc->size(), dir, layerDir[l.component])) continue;
+		present[l.component] = true;
+		const DccDirection& d = layerDir[l.component];
+		x0 = std::min(x0, d.boxX); y0 = std::min(y0, d.boxY); x1 = std::max(x1, d.boxX + d.width); y1 = std::max(y1, d.boxY + d.height);
+	}
+	if (x0 >= x1 || y0 >= y1) return nullptr;
+	int w = x1 - x0, h = y1 - y0;
+	std::vector<jint> out(7 + (size_t)w * h * cof.frames, 0);
+	out[0] = cof.frames; out[1] = cof.animRate; out[2] = cof.dirs; out[3] = x0; out[4] = y0; out[5] = w; out[6] = h;
+	for (int f = 0; f < cof.frames; ++f) {
+		jint* img = &out[7 + (size_t)w * h * f];
+		for (int k = 0; k < cof.layers; ++k) {
+			int comp = cof.priority[((size_t)dir * cof.frames + f) * cof.layers + k];
+			if (comp >= 16 || !present[comp]) continue;
+			const DccDirection& d = layerDir[comp];
+			if (f >= (int)d.frames.size()) continue;
+			const std::vector<uint8_t>& px = d.frames[f];
+			bool translucent = false;
+			for (const CofLayer& l : cof.layer) if (l.component == comp && l.transparent) translucent = true;
+			for (int y = 0; y < d.height; ++y)
+				for (int x = 0; x < d.width; ++x) {
+					uint8_t c = px[(size_t)y * d.width + x];
+					if (!c) continue;
+					const uint8_t* rgb = gPalette + c * 3;
+					uint32_t a = translucent ? 0x80u : 0xFFu;
+					img[(size_t)(y + d.boxY - y0) * w + (x + d.boxX - x0)] = (jint)(a << 24 | rgb[2] << 16 | rgb[1] << 8 | rgb[0]);
+				}
+		}
+	}
+	jintArray arr = env->NewIntArray((jsize)out.size());
+	env->SetIntArrayRegion(arr, 0, (jsize)out.size(), out.data());
+	return arr;
 }

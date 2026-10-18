@@ -97,6 +97,8 @@ bool d2game_move_to(int nX, int nY) {
 // One game frame (1/25 s).
 void d2game_tick() {
 	if (!gPlayer || !gPlayer->pDynamicPath) return;
+	UNITS_UpdateFrame(gPlayer); // animation advances every game frame, as in D2Game
+	D2COMMON_10193_PATH_AdjustDirection(gPlayer->pDynamicPath); // turn towards the path direction
 	int nMode = gPlayer->dwAnimMode;
 	if (nMode == PLRMODE_WALK || nMode == PLRMODE_TOWNWALK || nMode == PLRMODE_RUN) {
 		if (!D2Common_10226(gPlayer, 1024)) {
@@ -106,14 +108,15 @@ void d2game_tick() {
 	}
 }
 
-// {subtile x, subtile y, precision x, precision y (16.16), mode, direction, level}
+// {subtile x, subtile y, precision x, precision y (16.16), mode, direction, level, frame, frame count}
 void d2game_player_state(int* out) {
-	if (!gPlayer || !gPlayer->pDynamicPath) { for (int i = 0; i < 7; ++i) out[i] = 0; return; }
+	if (!gPlayer || !gPlayer->pDynamicPath) { for (int i = 0; i < 9; ++i) out[i] = 0; return; }
 	D2DynamicPathStrc* p = gPlayer->pDynamicPath;
 	out[0] = PATH_GetXPosition(p); out[1] = PATH_GetYPosition(p);
 	out[2] = PATH_GetPrecisionX(p); out[3] = PATH_GetPrecisionY(p);
 	out[4] = gPlayer->dwAnimMode; out[5] = PATH_GetDirection(p);
 	out[6] = DUNGEON_GetLevelIdFromRoom(UNITS_GetRoom(gPlayer));
+	UNITS_GetFrameMetrics(gPlayer, &out[7], &out[8]);
 }
 
 D2UnitStrc* d2game_player() { return gPlayer; }

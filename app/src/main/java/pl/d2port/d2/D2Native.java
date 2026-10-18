@@ -55,6 +55,12 @@ public final class D2Native {
     public static native boolean moveTo(int x, int y);
     /** One game frame (D2 runs 25 frames per second). */
     public static native void tick();
-    /** {subtileX, subtileY, precisionX, precisionY (16.16), animMode, direction, levelId} */
+    /** {subtileX, subtileY, precisionX, precisionY (16.16), animMode, direction (0-63), levelId, frame, frameCount} */
     public static native int[] playerState();
+    /**
+     * Composite animation (COF + DCC layers) of one COF direction:
+     * {frames, animRate, cofDirections, boxX, boxY, width, height, argb frames...}; box relative to the foot point.
+     * armor holds the 16 component codes (HD TR LG RA LA RH LH SH S1-S8), e.g. "LIT", null for none.
+     */
+    public static native int[] unitAnimation(String token, String mode, String weaponClass, String[] armor, int direction);
 }

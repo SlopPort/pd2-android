@@ -10,6 +10,7 @@
 #include <Drlg/D2DrlgActivate.h>
 #include <D2Collision.h>
 #include <Path/Path.h>
+#include <Path/PathMisc.h>
 #include <Units/Units.h>
 #include "game.h"
 #include <cstdio>
@@ -130,6 +131,10 @@ int main(int argc, char** argv) {
 		fwrite(img.data(), 1, img.size(), f);
 		fclose(f);
 		printf("collision level %d: %d rooms, %d grids, %dx%d subtiles\n", nDump, nRooms, nGrids, w, h);
+	}
+	if (getenv("D2DIRS")) {
+		const int v[8][2] = {{10, 0}, {10, 10}, {0, 10}, {-10, 10}, {-10, 0}, {-10, -10}, {0, -10}, {10, -10}};
+		for (auto& p : v) printf("dir to %3d,%3d = %d\n", p[0], p[1], PATH_ComputeDirection(100, 100, 100 + p[0], 100 + p[1]));
 	}
 	if (getenv("D2MOVE")) {
 		// Player movement through D2Common: spawn in town, walk/run 20 subtiles east, 2 s of frames.

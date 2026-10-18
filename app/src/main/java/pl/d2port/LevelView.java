@@ -27,6 +27,8 @@ class LevelView extends View {
     boolean showCollision;
     /** Hero position in subtiles (with fraction) or NaN; when set the camera follows it. */
     volatile float heroX = Float.NaN, heroY = Float.NaN;
+    /** Current hero animation frame and its offset from the foot point. */
+    volatile Bitmap heroFrame; volatile int heroOffX, heroOffY;
     private final Paint hero = new Paint(), heroRing = new Paint();
     private final Paint paint = new Paint(), red = new Paint();
 
@@ -74,11 +76,10 @@ class LevelView extends View {
         for (int i = 0; i + 5 < t.length; i += 6) if (t[i] == 0) drawTile(c, l, i, viewW, viewH);
         for (Integer i : l.order) drawTile(c, l, i, viewW, viewH);
         if (!Float.isNaN(hx)) {
-            // Placeholder for the hero sprite: marker at the unit's subtile position.
             float sx = (hx - hy) * 16f, sy = (hx + hy) * 8f;
-            c.drawOval(sx - 14, sy - 7, sx + 14, sy + 7, heroRing);
-            c.drawRect(sx - 8, sy - 70, sx + 8, sy, hero);
-            c.drawRect(sx - 8, sy - 70, sx + 8, sy, heroRing);
+            Bitmap hb = heroFrame;
+            if (hb != null) c.drawBitmap(hb, sx + heroOffX, sy + heroOffY, paint);
+            else { c.drawRect(sx - 8, sy - 70, sx + 8, sy, hero); c.drawRect(sx - 8, sy - 70, sx + 8, sy, heroRing); }
         }
         if (showCollision && l.collision != null) {
             int w = l.width * 5;
