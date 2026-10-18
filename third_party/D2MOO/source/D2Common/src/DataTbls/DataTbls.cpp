@@ -671,6 +671,24 @@ void* __stdcall DATATBLS_CompileTxt(HD2ARCHIVE hArchive, const char* szName, D2B
 	{
 		nRecordCount = *(int*)pData;
 		pTxt = (char*)pData + 4;
+#ifdef __ANDROID__
+		// PD2 ships some tables in a newer layout than D2MOO's 1.10 structs.
+		if (nRecordCount > 0 && dwDataSize - 4 != (size_t)nRecordCount * dwSize)
+		{
+			FOG_Trace("BINSIZE %s: %d records of %d bytes in file, struct has %d; compiling the txt instead", szName, nRecordCount, (int)((dwDataSize - 4) / nRecordCount), (int)dwSize);
+			D2_FREE_POOL(nullptr, pData);
+			wsprintfA(szFilePath, "%s\\%s%s", "DATA\\GLOBAL\\EXCEL", szName, ".txt");
+			pData = ARCHIVE_ALLOC_BUFFER_AND_READ_FILE_TO_IT(hArchive, szFilePath, &dwDataSize);
+			D2_ASSERT(pData);
+			pBinFile = FOG_CreateBinFile(pData, dwDataSize);
+			nRecordCount = FOG_GetRecordCountFromBinFile(pBinFile);
+			// Same shape as a loaded .bin (count, then records) so DATATBLS_UnloadBin can free it.
+			pTxt = (char*)D2_CALLOC_POOL(nullptr, dwSize * nRecordCount + 4) + 4;
+			FOG_10207(pBinFile, pTbl, pTxt, nRecordCount, dwSize);
+			FOG_FreeBinFile(pBinFile);
+			D2_FREE_POOL(nullptr, pData);
+		}
+#endif
 	}
 	else
 	{

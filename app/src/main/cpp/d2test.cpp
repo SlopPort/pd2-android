@@ -9,6 +9,9 @@
 #include <Drlg/D2DrlgDrlg.h>
 #include <Drlg/D2DrlgActivate.h>
 #include <D2Collision.h>
+#include <Path/Path.h>
+#include <Units/Units.h>
+#include "game.h"
 #include <cstdio>
 #include <vector>
 extern "C" void d2native_set_data_root(const char* root);
@@ -127,6 +130,23 @@ int main(int argc, char** argv) {
 		fwrite(img.data(), 1, img.size(), f);
 		fclose(f);
 		printf("collision level %d: %d rooms, %d grids, %dx%d subtiles\n", nDump, nRooms, nGrids, w, h);
+	}
+	if (getenv("D2MOVE")) {
+		// Player movement through D2Common: spawn in town, walk/run 20 subtiles east, 2 s of frames.
+		if (d2game_spawn(pAct, 4)) {
+			int s[7];
+			d2game_player_state(s);
+			printf("spawn %d,%d mode %d level %d\n", s[0], s[1], s[4], s[6]);
+			d2game_set_run(getenv("D2RUN") != nullptr);
+			bool ok = d2game_move_to(s[0] + 20, s[1]);
+			printf("path: %d points\n", ok ? PATH_GetNumberOfPathPoints(d2game_player()->pDynamicPath) : 0);
+			for (int f = 1; f <= 50; ++f) {
+				d2game_tick();
+				d2game_player_state(s);
+				if (f % 5 == 0 || f == 1) printf("frame %2d: %d,%d prec %.3f,%.3f mode %d dir %d\n", f, s[0], s[1], s[2] / 65536.0, s[3] / 65536.0, s[4], s[5]);
+			}
+		}
+		d2game_free();
 	}
 	DUNGEON_FreeAct(pAct);
 	return 0;

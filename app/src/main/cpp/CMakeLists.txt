@@ -13,7 +13,7 @@ list(FILTER D2LANG_SRC EXCLUDE REGEX "(DllMain|D2LangStubs)\.cpp$")
 file(GLOB_RECURSE D2CMP_SRC ${D2MOO}/D2CMP/src/*.cpp)
 list(FILTER D2CMP_SRC EXCLUDE REGEX "(DllMain|D2CMP)\.cpp$")
 
-add_library(d2native SHARED ${D2COMMON_SRC} ${FOG_SRC} ${D2LANG_SRC} ${D2CMP_SRC} d2native.cpp storm_android.cpp fog_android.cpp lang_android.cpp cmp_android.cpp)
+add_library(d2native SHARED ${D2COMMON_SRC} ${FOG_SRC} ${D2LANG_SRC} ${D2CMP_SRC} d2native.cpp storm_android.cpp fog_android.cpp lang_android.cpp cmp_android.cpp game.cpp)
 target_include_directories(d2native PRIVATE compat
   ${D2MOO}/D2Common/include ${D2MOO}/D2CommonDefinitions/include ${D2MOO}/Fog/include
   ${D2MOO}/Storm/include ${D2MOO}/D2Lang/include ${D2MOO}/D2CMP/include ${D2MOO}/D2Hell/include)
