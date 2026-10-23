@@ -9,7 +9,8 @@
 - Monster spawning (implemented from decompilation), camp NPCs with their AI.
 - Drawing all active rooms (seamless level crossing).
 - Leaving town on foot into Blood Moor (seamless); developer route helper `route.cpp` and the
-  "→ poziom 2 (dev)" button.
+  "→ poziom 2 (dev)" and "→ potwór (dev)" buttons (walk to the nearest hostile monster, or explore
+  towards the middle of the level when none is loaded yet).
 - Automap minimap: cells from D2Common (`DATATBLS_GetAutomapCellId`) for rooms the hero has been
   near, drawn with `maximap.dc6` frames (own DC6 decoder). Revealed rooms are remembered natively.
 

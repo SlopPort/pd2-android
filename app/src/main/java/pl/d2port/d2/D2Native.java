@@ -90,4 +90,6 @@ public final class D2Native {
     public static native int[] dc6Frames(String path);
     /** Developer helper: one walk command along a route towards a level (false when there or no route). */
     public static native boolean devWalkToLevel(int level, boolean run);
+    /** Developer helper: one walk command along a route towards a subtile (false when there or no route). */
+    public static native boolean devWalkToPoint(int x, int y, boolean run);
 }

@@ -527,3 +527,18 @@ extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToLevel(
 	sgame_move(p.x, p.y, run);
 	return JNI_TRUE;
 }
+
+// Developer helper: one walk/run command along a planned route towards a subtile.
+extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToPoint(JNIEnv* env, jclass, jint x, jint y, jboolean run) {
+	EnvScope scope(env);
+	D2DrlgActStrc* pAct = sgame_act();
+	if (!pAct || !sgame_ready()) return JNI_FALSE;
+	int s[9];
+	sgame_player_state(s);
+	if (std::abs(s[0] - x) + std::abs(s[1] - y) <= 4) return JNI_FALSE;
+	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], x, y, 90);
+	if (route.empty()) return JNI_FALSE;
+	const RoutePoint& p = route[std::min<size_t>(route.size() - 1, 12)];
+	sgame_move(p.x, p.y, run);
+	return JNI_TRUE;
+}

@@ -34,6 +34,8 @@ public final class GameActivity extends Activity {
     private boolean run;
     /** Developer helper: walk towards this level (0 = off). */
     private volatile int devWalkLevel;
+    /** Developer helper: walk to the nearest hostile monster. */
+    private volatile boolean devWalkMonster;
     private LevelView view;
     private TextView status;
     private Stick stick;
@@ -58,7 +60,9 @@ public final class GameActivity extends Activity {
         runButton.setOnClickListener(v -> { run = !run; runButton.setText(run ? "Bieg: wł." : "Bieg: wył."); });
         Button walk = new Button(this); walk.setAllCaps(false); walk.setText("→ poziom 2 (dev)");
         walk.setOnClickListener(v -> devWalkLevel = devWalkLevel == 0 ? 2 : 0);
-        bar.addView(runButton); bar.addView(walk); bar.addView(status);
+        Button hunt = new Button(this); hunt.setAllCaps(false); hunt.setText("→ potwór (dev)");
+        hunt.setOnClickListener(v -> devWalkMonster = !devWalkMonster);
+        bar.addView(runButton); bar.addView(walk); bar.addView(hunt); bar.addView(status);
         root.addView(bar);
         root.setFitsSystemWindows(true);
         setContentView(root);
@@ -120,6 +124,7 @@ public final class GameActivity extends Activity {
                 D2Native.serverMove(tx, ty, run);
             }
             if (devWalkLevel > 0 && frame % 10 == 0 && dir == null && !D2Native.devWalkToLevel(devWalkLevel, run)) devWalkLevel = 0;
+            if (devWalkMonster && frame % 10 == 0 && dir == null) devWalkMonster = walkToNearestMonster();
             D2Native.serverTick();
             int[] s = D2Native.serverPlayer();
             java.util.List<LevelView.Sprite> list = new java.util.ArrayList<>();
@@ -143,6 +148,23 @@ public final class GameActivity extends Activity {
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }
+    }
+
+    /** Developer helper; town NPCs (monstats 146-179) are not targets. */
+    private boolean walkToNearestMonster() {
+        int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits();
+        int best = -1, bestD = Integer.MAX_VALUE;
+        for (int i = 0; i + 7 < u.length; i += 8) {
+            if (u[i] != 1 || (u[i + 1] >= 146 && u[i + 1] <= 179) || u[i + 5] == 0) continue; // monsters, alive
+            int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
+            if (d < bestD) { bestD = d; best = i; }
+        }
+        if (best >= 0) return bestD > 8 && D2Native.devWalkToPoint(u[best + 3], u[best + 4], run);
+        // None loaded yet: explore towards the middle of the hero's level.
+        int[] li = D2Native.levelInfo(act, s[6]);
+        if (li == null) return false;
+        int cx = (li[2] + li[4] / 2) * 5, cy = (li[3] + li[5] / 2) * 5;
+        return D2Native.devWalkToPoint(cx, cy, run);
     }
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
