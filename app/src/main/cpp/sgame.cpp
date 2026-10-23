@@ -167,7 +167,7 @@ bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& t
 		if (u->dwUnitType == UNIT_MONSTER && u->pMonsterData) {
 			for (int c = 0; c < 16; ++c) {
 				if (!D2COMMON_11068_GetCompInfo(u, c)) continue;
-				uint32_t code = D2Common_11069(u, u->pMonsterData->nComponent[c], c);
+				uint32_t code = D2Common_11069(u, c, u->pMonsterData->nComponent[c]); // (unit, component, choice)
 				char s[5] = {0};
 				memcpy(s, &code, 4);
 				for (int k = 3; k >= 0 && (s[k] == ' ' || !s[k]); --k) s[k] = 0;

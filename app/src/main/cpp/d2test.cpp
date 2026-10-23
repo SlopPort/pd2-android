@@ -14,6 +14,7 @@
 #include <Units/Units.h>
 #include "game.h"
 #include "sgame.h"
+#include <Drlg/D2DrlgPreset.h>
 #include <unistd.h>
 #include <csignal>
 #include <cstdio>
@@ -88,6 +89,23 @@ int main(int argc, char** argv) {
 			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
 		}
 		printf("units after: %d\n", sgame_units(units));
+		{
+			D2MonStats2Txt* r = UNITS_GetMonStats2TxtRecordFromMonsterId(154);
+			printf("charsi monstats2 %p choices:", (void*)r);
+			if (r) for (int c = 0; c < 16; ++c) printf(" %d", r->nComponentChoiceCounts[c]);
+			printf(" | first HD entries:");
+			if (r) for (int k = 0; k < 4; ++k) printf(" %d", (int)(uint8_t)r->unk0x26[0].nComposit[k]);
+			printf(" totalpieces %d flags %08x\n", r ? r->nTotalPieces : -1, r ? r->dwComponentFlags : 0);
+		}
+		if (D2DrlgActStrc* pServerAct = sgame_act()) {
+			int nMon = 0, nMonSpawned = 0, nActive = 0;
+			for (D2DrlgRoomStrc* r = DRLG_GetLevel(pServerAct->pDrlg, 1)->pFirstRoomEx; r; r = r->pDrlgRoomNext) {
+				if (r->pRoom) ++nActive;
+				for (D2PresetUnitStrc* p = r->pPresetUnits; p; p = p->pNext)
+					if (p->nUnitType == 1) { ++nMon; if (p->bSpawned & 1) ++nMonSpawned; printf("  monster preset %d mode %d spawned %d\n", p->nIndex, p->nMode, p->bSpawned); }
+			}
+			printf("camp: %d active rooms, %d monster presets, %d spawned\n", nActive, nMon, nMonSpawned);
+		}
 		for (size_t i = 0; i + 7 < units.size(); i += 8)
 			if (units[i] != 4) printf("  type %d class %d at %d,%d mode %d\n", units[i], units[i + 1], units[i + 3], units[i + 4], units[i + 5]);
 		return 0;
