@@ -293,6 +293,8 @@ const std::vector<uint8_t>* gameFile(const std::string& path) {
 // Composite animation of a character/monster token for one COF direction:
 // {frames, animRate, cofDirs, boxX, boxY, width, height, argb frames...}; box relative to the foot point.
 // armor: 16 armour/weapon codes per component ("LIT", "HAX", ...), empty for none.
+static jintArray compositeAnimation(JNIEnv* env, const std::string& category, const std::string& token, const std::string& mode, const std::string& wclass, const std::string* armor, int dir);
+
 extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_unitAnimation(JNIEnv* env, jclass, jstring jtoken, jstring jmode, jstring jwclass, jobjectArray jarmor, jint dir) {
 	EnvScope scope(env);
 	const char* tk = env->GetStringUTFChars(jtoken, nullptr); std::string token = tk; env->ReleaseStringUTFChars(jtoken, tk);
@@ -303,7 +305,12 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_unitAnimation(
 		jstring s = (jstring)env->GetObjectArrayElement(jarmor, i);
 		if (s) { const char* c = env->GetStringUTFChars(s, nullptr); armor[i] = c; env->ReleaseStringUTFChars(s, c); }
 	}
-	std::string base = "DATA\\GLOBAL\\CHARS\\" + token + "\\";
+	return compositeAnimation(env, "CHARS", token, mode, wclass, armor, dir);
+}
+
+// category: CHARS, MONSTERS or OBJECTS (folder under DATA\GLOBAL).
+static jintArray compositeAnimation(JNIEnv* env, const std::string& category, const std::string& token, const std::string& mode, const std::string& wclass, const std::string* armor, int dir) {
+	std::string base = "DATA\\GLOBAL\\" + category + "\\" + token + "\\";
 	const std::vector<uint8_t>* cofData = gameFile(base + "COF\\" + token + mode + wclass + ".COF");
 	Cof cof;
 	if (!cofData || !cof_parse(cofData->data(), cofData->size(), cof) || dir < 0 || dir >= cof.dirs) return nullptr;
@@ -349,4 +356,60 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_unitAnimation(
 	jintArray arr = env->NewIntArray((jsize)out.size());
 	env->SetIntArrayRegion(arr, 0, (jsize)out.size(), out.data());
 	return arr;
+}
+
+// ------------------------------------------------------------------ D2Game (server) game
+
+#include "sgame.h"
+
+extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_startGame(JNIEnv* env, jclass, jint charClass, jint difficulty) {
+	EnvScope scope(env);
+	if (!gTablesLoaded || !sgame_create("Android", charClass, difficulty)) return 0;
+	return (jlong)(intptr_t)sgame_act();
+}
+
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverTick(JNIEnv* env, jclass) { EnvScope scope(env); sgame_tick(); }
+extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_serverReady(JNIEnv* env, jclass) { EnvScope scope(env); return sgame_ready() ? JNI_TRUE : JNI_FALSE; }
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverMove(JNIEnv* env, jclass, jint x, jint y, jboolean run) { EnvScope scope(env); sgame_move(x, y, run); }
+extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_serverAct(JNIEnv* env, jclass) { EnvScope scope(env); return (jlong)(intptr_t)sgame_act(); }
+
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverPlayer(JNIEnv* env, jclass) {
+	EnvScope scope(env);
+	jint s[9];
+	sgame_player_state((int*)s);
+	jintArray out = env->NewIntArray(9);
+	env->SetIntArrayRegion(out, 0, 9, s);
+	return out;
+}
+
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverUnits(JNIEnv* env, jclass) {
+	EnvScope scope(env);
+	std::vector<int> v;
+	sgame_units(v);
+	jintArray out = env->NewIntArray((jsize)v.size());
+	env->SetIntArrayRegion(out, 0, (jsize)v.size(), (const jint*)v.data());
+	return out;
+}
+
+// "CATEGORY|TOKEN|MODE|WCLASS|c0,c1,...,c15" or null.
+extern "C" JNIEXPORT jstring JNICALL Java_pl_d2port_d2_D2Native_unitLook(JNIEnv* env, jclass, jint type, jint guid) {
+	EnvScope scope(env);
+	std::string category, token, mode, wclass, armor[16];
+	if (!sgame_unit_look(type, guid, category, token, mode, wclass, armor)) return nullptr;
+	std::string key = category + "|" + token + "|" + mode + "|" + wclass + "|";
+	for (int i = 0; i < 16; ++i) { if (i) key += ","; key += armor[i]; }
+	return env->NewStringUTF(key.c_str());
+}
+
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_lookAnimation(JNIEnv* env, jclass, jstring jkey, jint dir) {
+	EnvScope scope(env);
+	const char* k = env->GetStringUTFChars(jkey, nullptr); std::string key = k; env->ReleaseStringUTFChars(jkey, k);
+	std::vector<std::string> f;
+	size_t start = 0;
+	for (size_t i = 0; i <= key.size(); ++i) if (i == key.size() || key[i] == '|') { f.push_back(key.substr(start, i - start)); start = i + 1; }
+	if (f.size() != 5) return nullptr;
+	std::string armor[16];
+	int c = 0; start = 0;
+	for (size_t i = 0; i <= f[4].size() && c < 16; ++i) if (i == f[4].size() || f[4][i] == ',') { armor[c++] = f[4].substr(start, i - start); start = i + 1; }
+	return compositeAnimation(env, f[0], f[1], f[2], f[3], armor, dir);
 }

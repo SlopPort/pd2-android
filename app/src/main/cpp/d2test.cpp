@@ -88,6 +88,8 @@ int main(int argc, char** argv) {
 			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
 		}
 		printf("units after: %d\n", sgame_units(units));
+		for (size_t i = 0; i + 7 < units.size(); i += 8)
+			if (units[i] != 4) printf("  type %d class %d at %d,%d mode %d\n", units[i], units[i + 1], units[i + 3], units[i + 4], units[i + 5]);
 		return 0;
 	}
 	printf("lvlmaze %p count %d, lvlprest %p count %d\n", (void*)sgptDataTables->pLvlMazeTxt, sgptDataTables->nLvlMazeTxtRecordCount, (void*)sgptDataTables->pLvlPrestTxt, sgptDataTables->nLvlPrestTxtRecordCount);

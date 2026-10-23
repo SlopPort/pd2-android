@@ -30,6 +30,14 @@ class LevelView extends View {
     /** Current hero animation frame and its offset from the foot point. */
     volatile Bitmap heroFrame; volatile int heroOffX, heroOffY;
     private final Paint hero = new Paint(), heroRing = new Paint();
+
+    /** A unit to draw: foot point in subtiles (with fraction), current frame and its offset. */
+    static final class Sprite {
+        final float x, y; final Bitmap frame; final int offX, offY;
+        Sprite(float x, float y, Bitmap frame, int offX, int offY) { this.x = x; this.y = y; this.frame = frame; this.offX = offX; this.offY = offY; }
+    }
+    /** Units of the current frame, hero included; replaced whole by the game thread. */
+    volatile Sprite[] sprites = new Sprite[0];
     private final Paint paint = new Paint(), red = new Paint();
 
     LevelView(Context c) {
@@ -74,12 +82,20 @@ class LevelView extends View {
         float viewW = getWidth() / scale, viewH = getHeight() / scale;
         int[] t = l.tiles;
         for (int i = 0; i + 5 < t.length; i += 6) if (t[i] == 0) drawTile(c, l, i, viewW, viewH);
-        for (Integer i : l.order) drawTile(c, l, i, viewW, viewH);
-        if (!Float.isNaN(hx)) {
+        // Walls/roofs and units in depth order (further up the screen first). A wall tile's depth is
+        // the subtile sum at its bottom row, a unit's that of its foot point.
+        Sprite[] sp = sprites.clone();
+        java.util.Arrays.sort(sp, (p, q) -> Float.compare(p.x + p.y, q.x + q.y));
+        int si = 0;
+        for (Integer i : l.order) {
+            float wallDepth = (t[i + 1] + t[i + 2]) * 5 + 8;
+            while (si < sp.length && sp[si].x + sp[si].y < wallDepth) drawSprite(c, sp[si++]);
+            drawTile(c, l, i, viewW, viewH);
+        }
+        while (si < sp.length) drawSprite(c, sp[si++]);
+        if (!Float.isNaN(hx) && heroFrame == null) {
             float sx = (hx - hy) * 16f, sy = (hx + hy) * 8f;
-            Bitmap hb = heroFrame;
-            if (hb != null) c.drawBitmap(hb, sx + heroOffX, sy + heroOffY, paint);
-            else { c.drawRect(sx - 8, sy - 70, sx + 8, sy, hero); c.drawRect(sx - 8, sy - 70, sx + 8, sy, heroRing); }
+            c.drawRect(sx - 8, sy - 70, sx + 8, sy, hero); c.drawRect(sx - 8, sy - 70, sx + 8, sy, heroRing);
         }
         if (showCollision && l.collision != null) {
             int w = l.width * 5;
@@ -94,6 +110,12 @@ class LevelView extends View {
                 }
         }
         c.restore();
+    }
+
+    private void drawSprite(Canvas c, Sprite s) {
+        if (s.frame == null) return;
+        float sx = (s.x - s.y) * 16f, sy = (s.x + s.y) * 8f;
+        c.drawBitmap(s.frame, sx + s.offX, sy + s.offY, paint);
     }
 
     private void drawTile(Canvas c, Level l, int i, float viewW, float viewH) {

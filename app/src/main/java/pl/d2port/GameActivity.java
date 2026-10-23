@@ -35,7 +35,7 @@ public final class GameActivity extends Activity {
     private LevelView view;
     private TextView status;
     private Stick stick;
-    private final HeroLook look = new HeroLook("BA", "HTH");
+    private final Looks looks = new Looks();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -48,7 +48,7 @@ public final class GameActivity extends Activity {
         LinearLayout bar = new LinearLayout(this);
         status = new TextView(this); status.setTextColor(Color.WHITE); status.setPadding(16, 8, 16, 8);
         Button runButton = new Button(this); runButton.setAllCaps(false); runButton.setText("Bieg: wył.");
-        runButton.setOnClickListener(v -> { run = !run; runButton.setText(run ? "Bieg: wł." : "Bieg: wył."); nativeThread.execute(() -> D2Native.setRun(run)); });
+        runButton.setOnClickListener(v -> { run = !run; runButton.setText(run ? "Bieg: wł." : "Bieg: wył."); });
         bar.addView(runButton); bar.addView(status);
         root.addView(bar);
         root.setFitsSystemWindows(true);
@@ -64,8 +64,9 @@ public final class GameActivity extends Activity {
             if (store.current() == null) throw new java.io.IOException("Brak plików gry (MPQ)");
             session = store.open();
             if (!D2Native.init(session.data) || !D2Native.loadPalette(0)) throw new java.io.IOException("Nie udało się wczytać tabel");
-            act = D2Native.allocAct(0, (int) (System.currentTimeMillis() & 0x7fffffff), 0);
-            if (act == 0 || !D2Native.spawnPlayer(act, 4)) throw new java.io.IOException("Nie udało się utworzyć aktu/postaci");
+            // A new single-player game run by D2Game, as the original client created one.
+            act = D2Native.startGame(4, 0);
+            if (act == 0) throw new java.io.IOException("D2Game nie utworzył gry (logcat D2Native)");
             showLevelOfPlayer();
             nativeThread.scheduleAtFixedRate(this::gameFrame, FRAME_MS, FRAME_MS, TimeUnit.MILLISECONDS);
         } catch (Exception ex) {
@@ -74,8 +75,8 @@ public final class GameActivity extends Activity {
     }
 
     private void showLevelOfPlayer() {
-        int[] s = D2Native.playerState();
-        if (s[6] == levelShown) return;
+        int[] s = D2Native.serverPlayer();
+        if (s[6] == levelShown || s[6] == 0) return;
         levelShown = s[6];
         long t = System.nanoTime();
         LevelView.Level lv = LevelView.load(act, s[6]);
@@ -83,32 +84,47 @@ public final class GameActivity extends Activity {
         runOnUiThread(() -> { if (lv != null) view.setLevel(lv); status.setText("Poziom " + s[6] + " (" + ms + " ms)"); });
     }
 
-    /** One D2 frame on the native thread. */
+    /** One D2 frame on the native thread: commands in, server frame, state out. */
     private void gameFrame() {
         try {
             frame++;
             float[] dir = stick.direction();
-            if (dir != null && frame % 5 == 0) {
-                int[] s = D2Native.playerState();
+            if (dir != null && frame % 5 == 0 && D2Native.serverReady()) {
+                int[] s = D2Native.serverPlayer();
                 // Screen direction -> subtile offset (isometric: x right-down, y left-down).
                 float dist = 3 + 5 * dir[2];
                 float sx = dir[0] * dist, sy = dir[1] * dist;
                 int tx = Math.round(s[0] + sx + sy * 2), ty = Math.round(s[1] + sy * 2 - sx);
-                D2Native.moveTo(tx, ty);
+                D2Native.serverMove(tx, ty, run);
             }
-            D2Native.tick();
-            int[] s = D2Native.playerState();
-            HeroLook.Anim anim = look.get(s[4], s[5]);
-            if (anim.frames != null && anim.frames.length > 0) {
-                view.heroFrame = anim.frames[Math.max(0, Math.min(anim.frames.length - 1, s[7]))];
-                view.heroOffX = anim.offX; view.heroOffY = anim.offY;
+            D2Native.serverTick();
+            int[] s = D2Native.serverPlayer();
+            java.util.List<LevelView.Sprite> list = new java.util.ArrayList<>();
+            float hx = s[2] / 65536f, hy = s[3] / 65536f;
+            LevelView.Sprite hero = sprite(0, 0, hx, hy, s[5], s[7]);
+            if (hero != null) list.add(hero);
+            int[] u = D2Native.serverUnits();
+            for (int i = 0; i + 7 < u.length; i += 8) {
+                if (u[i] == 4) continue; // items lie in inventories here; ground items come later
+                // Only units near the hero (a screen and a half).
+                if (Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]) > 60) continue;
+                LevelView.Sprite sp = sprite(u[i], u[i + 2], u[i + 3] + 0.5f, u[i + 4] + 0.5f, u[i + 6], u[i + 7]);
+                if (sp != null) list.add(sp);
             }
-            view.heroX = s[2] / 65536f; view.heroY = s[3] / 65536f;
+            view.sprites = list.toArray(new LevelView.Sprite[0]);
+            view.heroFrame = hero != null ? hero.frame : null;
+            view.heroX = hx; view.heroY = hy;
             view.postInvalidateOnAnimation();
             if (s[6] != levelShown && s[6] != 0) showLevelOfPlayer();
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }
+    }
+
+    private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
+        Looks.Anim a = looks.get(D2Native.unitLook(type, guid), dir64);
+        if (a == null || a.frames == null || a.frames.length == 0) return null;
+        return new LevelView.Sprite(x, y, a.frames[Math.max(0, Math.min(a.frames.length - 1, frame))], a.offX, a.offY);
     }
 
     @Override protected void onDestroy() {

@@ -13,3 +13,6 @@ D2DrlgActStrc* sgame_act();
 void sgame_player_state(int* out);
 // Units other than the player: 8 ints each {type, classId, guid, x, y, mode, direction, frame}.
 int sgame_units(std::vector<int>& out);
+#include <string>
+// Graphics of a unit (type, guid; guid 0 with type 0 = the player): COF folder, token, mode, weapon class, 16 layer codes.
+bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& token, std::string& mode, std::string& wclass, std::string* armor);

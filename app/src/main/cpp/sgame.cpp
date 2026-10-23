@@ -132,3 +132,65 @@ int sgame_units(std::vector<int>& out) {
 	});
 	return (int)out.size() / 8;
 }
+
+#include <D2Composit.h>
+#include <D2Monsters.h>
+#include <UNIT/SUnit.h>
+#include <Units/Monster.h>
+#include <D2Items.h>
+#include <D2Inventory.h>
+
+// What D2Client would load for a unit: COF folder/token/mode/weapon class from D2Common's composit
+// code, and the component code of each layer (player: light armour; monster: its own picks).
+bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& token, std::string& mode, std::string& wclass, std::string* armor) {
+	bool ok = false;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = nType == UNIT_PLAYER && nGuid == 0 ? player(pGame) : SUNIT_GetServerUnit(pGame, nType, nGuid);
+		if (!u) return;
+		char szPath[MAX_PATH] = {};
+		int nWeaponClass = 0;
+		D2Common_10884_COMPOSIT_unk(u, u->dwClassId, u->dwAnimMode, u->dwUnitType, u->pInventory, szPath, &nWeaponClass, TRUE, 1);
+		// "DATA\GLOBAL\<CATEGORY>\<TK>\COF\<TK><MD><WCL>.COF"
+		std::string p = szPath;
+		static int logged;
+		if (logged++ < 20) __android_log_print(ANDROID_LOG_INFO, "D2Native", "look type %d class %d mode %d: %s wclass %08x", nType, (int)u->dwClassId, (int)u->dwAnimMode, szPath, nWeaponClass);
+		std::vector<std::string> parts;
+		size_t start = 0;
+		for (size_t i = 0; i <= p.size(); ++i) if (i == p.size() || p[i] == '\\') { parts.push_back(p.substr(start, i - start)); start = i + 1; }
+		if (parts.size() < 6) return;
+		category = parts[2]; token = parts[3];
+		std::string file = parts[5];
+		if (file.size() < token.size() + 2 + 4) return;
+		mode = file.substr(token.size(), 2);
+		wclass = file.substr(token.size() + 2, file.size() - token.size() - 2 - 4);
+		for (int c = 0; c < 16; ++c) armor[c].clear();
+		if (u->dwUnitType == UNIT_MONSTER && u->pMonsterData) {
+			for (int c = 0; c < 16; ++c) {
+				if (!D2COMMON_11068_GetCompInfo(u, c)) continue;
+				uint32_t code = D2Common_11069(u, u->pMonsterData->nComponent[c], c);
+				char s[5] = {0};
+				memcpy(s, &code, 4);
+				for (int k = 3; k >= 0 && (s[k] == ' ' || !s[k]); --k) s[k] = 0;
+				armor[c] = s;
+			}
+		} else {
+			// Body layers in the light set; weapon/shield layers use the code of the item held (e.g. HAX, BUC).
+			for (int c = 0; c < 16; ++c) armor[c] = c <= 4 ? "LIT" : "";
+			if (u->dwUnitType == UNIT_OBJECT) for (int c = 0; c < 16; ++c) armor[c] = "LIT";
+			if (u->dwUnitType == UNIT_PLAYER && u->pInventory) {
+				for (int loc : {BODYLOC_RARM, BODYLOC_LARM}) {
+					D2UnitStrc* item = INVENTORY_GetItemFromBodyLoc(u->pInventory, loc);
+					if (!item) continue;
+					int comp = ITEMS_GetComponent(item);
+					uint32_t code = ITEMS_GetBaseCode(item);
+					char s[5] = {0};
+					memcpy(s, &code, 4);
+					for (int k = 3; k >= 0 && (s[k] == ' ' || !s[k]); --k) s[k] = 0;
+					if (comp < 16) armor[comp] = s;
+				}
+			}
+		}
+		ok = true;
+	});
+	return ok;
+}

@@ -63,4 +63,23 @@ public final class D2Native {
      * armor holds the 16 component codes (HD TR LG RA LA RH LH SH S1-S8), e.g. "LIT", null for none.
      */
     public static native int[] unitAnimation(String token, String mode, String weaponClass, String[] armor, int direction);
+
+    // ---- D2Game: the real game server (single player through an in-memory D2Net queue)
+    /** New single-player game with a new character (charstats class); returns the act for map drawing, 0 on failure. */
+    public static native long startGame(int charClass, int difficulty);
+    /** Process client commands and run due server frames (call every 40 ms). */
+    public static native void serverTick();
+    /** The player has entered the game; commands are accepted. */
+    public static native boolean serverReady();
+    /** Walk/run command to a subtile (client packet 0x01/0x03). */
+    public static native void serverMove(int x, int y, boolean run);
+    public static native long serverAct();
+    /** Player state like playerState(). */
+    public static native int[] serverPlayer();
+    /** Other units: 8 ints each {type, classId, guid, x, y, mode, direction, frame}. */
+    public static native int[] serverUnits();
+    /** Graphics key of a unit (type 0 + guid 0 = the player). */
+    public static native String unitLook(int type, int guid);
+    /** Animation for a graphics key, same layout as unitAnimation. */
+    public static native int[] lookAnimation(String key, int direction);
 }
