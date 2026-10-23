@@ -14,6 +14,7 @@
 #include <Units/Units.h>
 #include "game.h"
 #include "sgame.h"
+#include "route.h"
 #include <Drlg/D2DrlgPreset.h>
 #include <unistd.h>
 #include <csignal>
@@ -95,8 +96,8 @@ int main(int argc, char** argv) {
 			D2DrlgActStrc* pServerAct = sgame_act();
 			D2DrlgLevelStrc* pCamp = DRLG_GetLevel(pServerAct->pDrlg, 1);
 			D2DrlgLevelStrc* pMoor = DRLG_GetLevel(pServerAct->pDrlg, 2);
-			int tx = 0, ty = 0;
-			for (D2DrlgRoomStrc* a = pCamp->pFirstRoomEx; a && !tx; a = a->pDrlgRoomNext)
+			int tx = (pMoor->nPosX + pMoor->nWidth / 2) * 5, ty = (pMoor->nPosY + pMoor->nHeight / 2) * 5;
+			if (false) for (D2DrlgRoomStrc* a = pCamp->pFirstRoomEx; a; a = a->pDrlgRoomNext)
 				for (D2DrlgRoomStrc* b = pMoor->pFirstRoomEx; b && !tx; b = b->pDrlgRoomNext)
 					if (a->nTileXPos <= b->nTileXPos + b->nTileWidth && b->nTileXPos <= a->nTileXPos + a->nTileWidth &&
 						a->nTileYPos <= b->nTileYPos + b->nTileHeight && b->nTileYPos <= a->nTileYPos + a->nTileHeight) {
@@ -104,13 +105,23 @@ int main(int argc, char** argv) {
 					}
 			printf("exit target %d,%d (camp %d,%d %dx%d)\n", tx, ty, pCamp->nPosX, pCamp->nPosY, pCamp->nWidth, pCamp->nHeight);
 			int lastLevel = 0;
+			std::vector<RoutePoint> route;
 			for (int f = 0; f < 25 * 90 && tx; ++f) {
-				if (f % 10 == 0) {
+				if (f % 50 == 0) {
 					sgame_player_state(s);
-					int dx = tx - s[0], dy = ty - s[1];
-					int d = std::max(std::abs(dx), std::abs(dy));
-					if (d > 20) { dx = dx * 20 / d; dy = dy * 20 / d; }
-					sgame_move(s[0] + dx, s[1] + dy, true);
+					route = test_plan_route(pServerAct, s[0], s[1], tx, ty, 90, lastLevel == 2 ? 0 : 2);
+					if (f % 250 == 0) printf("  route %zu steps, ends %d,%d\n", route.size(), route.empty() ? 0 : route.back().x, route.empty() ? 0 : route.back().y);
+				}
+				if (f % 10 == 0 && !route.empty()) {
+					sgame_player_state(s);
+					// Next walk command: the route point about 12 steps past the one nearest to the hero.
+					size_t nearest = 0; long nd = 1L << 30;
+					for (size_t k = 0; k < route.size(); ++k) {
+						long d = labs((long)(route[k].x - s[0])) + labs((long)(route[k].y - s[1]));
+						if (d < nd) { nd = d; nearest = k; }
+					}
+					size_t k = std::min(route.size() - 1, nearest + 12);
+					sgame_move(route[k].x, route[k].y, true);
 				}
 				usleep(40000);
 				sgame_tick();
@@ -118,10 +129,14 @@ int main(int argc, char** argv) {
 				if (s[6] != lastLevel) { printf("frame %d: level %d at %d,%d\n", f, s[6], s[0], s[1]); lastLevel = s[6]; }
 				if (f % 250 == 0) printf("frame %d: at %d,%d mode %d\n", f, s[0], s[1], s[4]);
 				if (lastLevel == 2 && f % 125 == 0) {
-					int nMon = 0;
 					sgame_units(units);
-					for (size_t i = 0; i + 7 < units.size(); i += 8) if (units[i] == 1) ++nMon;
-					printf("  monsters in game: %d\n", nMon);
+					int nNear = 0;
+					for (size_t i = 0; i + 7 < units.size(); i += 8) {
+						if (units[i] != 1) continue;
+						int d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
+						if (d < 60) { ++nNear; if (nNear <= 8) printf("  monster class %d at %d,%d mode %d (distance %d)\n", units[i + 1], units[i + 3], units[i + 4], units[i + 5], d); }
+					}
+					printf("  monsters within 60 subtiles: %d\n", nNear);
 				}
 			}
 		}

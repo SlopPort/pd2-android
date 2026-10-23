@@ -14,6 +14,7 @@ D2MOO upstream commit: see `third_party/D2MOO-UPSTREAM.txt`. The full diff of D2
 | `D2Game/src/PLAYER/PlayerList.cpp` | `dword_6FD4DC40` is the variable from `SUnit.cpp` | one original variable, declared twice with different types |
 | `D2Game/src/PLAYER/PlrSave.cpp` | without a save file, create a new character from its class template (expansion flag from the game) | the 1.10 client wrote a fresh `.d2s` first; we have no client-side character creation yet |
 | `D2Game/src/UNIT/Party.cpp` | assert `!pPartyControl` | inverted check in D2MOO (fails on PC too) |
+| `D2Game/src/OBJECTS/ObjRgn.cpp` | object regions stored at `[i]`, not `[0]` | D2MOO put every level's region in slot 0; populating the first non-town room crashed |
 | `D2Game/src/MONSTER/MonsterSpawn.cpp` | implemented `D2GAME_SpawnNormalMonster_6FC68E30` and `MONSTERSPAWN_SetupNormalMods` from their decompilation comments | stubs: no monster or NPC was ever created |
 
 `UNVERIFIED` in `MonsterSpawn.cpp`: the four offsets `unk_6FD28BC8` used when placing SpawnCol=1

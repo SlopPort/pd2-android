@@ -563,6 +563,19 @@ index 7d4bb08..9fabddb 100644
  //void __fastcall MONSTERSPAWN_SetupNormalMods(D2UnkMonCreateStrc* pMonCreate, D2UnitStrc* pUnit)
  //{
  //    v64 = v58->nMonsterId;
+diff --git a/source/D2Game/src/OBJECTS/ObjRgn.cpp b/source/D2Game/src/OBJECTS/ObjRgn.cpp
+index a610849..4dbbb77 100644
+--- a/source/D2Game/src/OBJECTS/ObjRgn.cpp
++++ b/source/D2Game/src/OBJECTS/ObjRgn.cpp
+@@ -41,7 +41,7 @@ int32_t __fastcall OBJRGN_AllocObjectControl(D2GameStrc* pGame)
+         pObjectRegion->nAct = pLevelsTxtRecord->nAct;
+         pObjectRegion->nPopulatedRooms = INT_MAX;
+         pObjectRegion->nTrapMonsterId = -1;
+-        pGame->pObjectControl->pObjectRegion[0] = pObjectRegion;
++        pGame->pObjectControl->pObjectRegion[i] = pObjectRegion; // D2MOO stored every region in slot 0
+     }
+ 
+     int32_t nShrineSubTypes[8] = {};
 diff --git a/source/D2Game/src/PLAYER/PlayerList.cpp b/source/D2Game/src/PLAYER/PlayerList.cpp
 index f83fa57..a1a0599 100644
 --- a/source/D2Game/src/PLAYER/PlayerList.cpp

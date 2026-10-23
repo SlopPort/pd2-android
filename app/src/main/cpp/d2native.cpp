@@ -503,3 +503,27 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_dc6Frames(JNIE
 	env->SetIntArrayRegion(out, 0, (jsize)v.size(), v.data());
 	return out;
 }
+
+// ------------------------------------------------------------------ developer: walk towards a level
+
+#include "route.h"
+
+// One step of the developer "walk to level" helper: plans over the loaded rooms towards the given
+// level and sends a walk/run command about 12 subtiles along the route, as a player's click would.
+// Returns false when the hero is already in that level or no route exists.
+extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToLevel(JNIEnv* env, jclass, jint level, jboolean run) {
+	EnvScope scope(env);
+	D2DrlgActStrc* pAct = sgame_act();
+	if (!pAct || !sgame_ready()) return JNI_FALSE;
+	int s[9];
+	sgame_player_state(s);
+	if (s[6] == level) return JNI_FALSE;
+	D2DrlgLevelStrc* pLevel = DRLG_GetLevel(pAct->pDrlg, level);
+	if (!pLevel) return JNI_FALSE;
+	int tx = (pLevel->nPosX + pLevel->nWidth / 2) * 5, ty = (pLevel->nPosY + pLevel->nHeight / 2) * 5;
+	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], tx, ty, 90, level);
+	if (route.empty()) return JNI_FALSE;
+	const RoutePoint& p = route[std::min<size_t>(route.size() - 1, 12)];
+	sgame_move(p.x, p.y, run);
+	return JNI_TRUE;
+}

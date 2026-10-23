@@ -32,6 +32,8 @@ public final class GameActivity extends Activity {
     private long act;
     private int levelShown, frame;
     private boolean run;
+    /** Developer helper: walk towards this level (0 = off). */
+    private volatile int devWalkLevel;
     private LevelView view;
     private TextView status;
     private Stick stick;
@@ -54,7 +56,9 @@ public final class GameActivity extends Activity {
         status = new TextView(this); status.setTextColor(Color.WHITE); status.setPadding(16, 8, 16, 8);
         Button runButton = new Button(this); runButton.setAllCaps(false); runButton.setText("Bieg: wył.");
         runButton.setOnClickListener(v -> { run = !run; runButton.setText(run ? "Bieg: wł." : "Bieg: wył."); });
-        bar.addView(runButton); bar.addView(status);
+        Button walk = new Button(this); walk.setAllCaps(false); walk.setText("→ poziom 2 (dev)");
+        walk.setOnClickListener(v -> devWalkLevel = devWalkLevel == 0 ? 2 : 0);
+        bar.addView(runButton); bar.addView(walk); bar.addView(status);
         root.addView(bar);
         root.setFitsSystemWindows(true);
         setContentView(root);
@@ -115,6 +119,7 @@ public final class GameActivity extends Activity {
                 int tx = Math.round(s[0] + sx + sy * 2), ty = Math.round(s[1] + sy * 2 - sx);
                 D2Native.serverMove(tx, ty, run);
             }
+            if (devWalkLevel > 0 && frame % 10 == 0 && dir == null && !D2Native.devWalkToLevel(devWalkLevel, run)) devWalkLevel = 0;
             D2Native.serverTick();
             int[] s = D2Native.serverPlayer();
             java.util.List<LevelView.Sprite> list = new java.util.ArrayList<>();

@@ -8,6 +8,8 @@
 - COF/DCC rendering of hero (with held weapons), objects and monsters/NPCs, depth-sorted.
 - Monster spawning (implemented from decompilation), camp NPCs with their AI.
 - Drawing all active rooms (seamless level crossing).
+- Leaving town on foot into Blood Moor (seamless); developer route helper `route.cpp` and the
+  "→ poziom 2 (dev)" button.
 - Automap minimap: cells from D2Common (`DATATBLS_GetAutomapCellId`) for rooms the hero has been
   near, drawn with `maximap.dc6` frames (own DC6 decoder). Revealed rooms are remembered natively.
 
@@ -15,7 +17,8 @@
 
 1. **Automap polish** — D2Client also reveals by line of sight and draws level names, exits and
    unit markers; our minimap reveals whole active rooms and shows only the hero.
-2. **Leaving town** — verify Blood Moor rooms, monsters spawning there (MonDen, regions), their AI.
+2. **Blood Moor** — reached on foot (bridge, seamless); D2Game spawns Fallen packs there. Next:
+   see them on screen, their AI reacting to the hero.
 3. **Combat** — attack/skill packets (0x05-0x11), hit recovery, death, item drops on the ground
    (draw ground items: DC6 `data/global/items` flippy files).
 4. **HUD** — life/mana orbs, belt, skill buttons; read stats from the server unit.
