@@ -50,6 +50,7 @@ class LevelView extends View {
 
     void setLevel(Level l) {
         level = l;
+        if (!Float.isNaN(heroX)) { invalidate(); return; }
         // Start centred on the level.
         float cx = l.posX + l.width / 2f, cy = l.posY + l.height / 2f;
         camX = (cx - cy) * 80; camY = (cx + cy) * 40;
@@ -120,6 +121,7 @@ class LevelView extends View {
 
     private void drawTile(Canvas c, Level l, int i, float viewW, float viewH) {
         int[] t = l.tiles;
+        if ((t[i + 5] & 0x8) != 0) return; // MAPTILE_HIDDEN: warps and helpers the game does not draw
         Bitmap b = l.images.get(t[i + 4]);
         if (b == null) return;
         int[] o = l.offsets.get(t[i + 4]);
@@ -145,6 +147,28 @@ class LevelView extends View {
             if (img == null) { lv.images.put(key, null); continue; }
             lv.images.put(key, Bitmap.createBitmap(img, 4, img[0], img[0], img[1], Bitmap.Config.ARGB_8888));
             lv.offsets.put(key, new int[]{img[2], img[3]});
+        }
+        sortDepth(lv);
+        return lv;
+    }
+
+    /**
+     * Drawable world from the rooms the game keeps active (any level); tile graphics come from and go
+     * into the shared cache, so only new tiles are decoded. Native thread only.
+     */
+    static Level fromActiveRooms(long act, java.util.Map<Integer, Bitmap> images, java.util.Map<Integer, int[]> offsets) {
+        int[] t = pl.d2port.d2.D2Native.activeTiles(act);
+        if (t == null) return null;
+        Level lv = new Level();
+        lv.tiles = t;
+        lv.images = images; lv.offsets = offsets;
+        for (int k = 0; k + 5 < t.length; k += 6) {
+            int key = t[k + 4];
+            if (images.containsKey(key)) continue;
+            int[] img = pl.d2port.d2.D2Native.tileImage(key);
+            if (img == null) { images.put(key, null); continue; }
+            images.put(key, Bitmap.createBitmap(img, 4, img[0], img[0], img[1], Bitmap.Config.ARGB_8888));
+            offsets.put(key, new int[]{img[2], img[3]});
         }
         sortDepth(lv);
         return lv;

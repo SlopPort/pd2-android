@@ -82,4 +82,6 @@ public final class D2Native {
     public static native String unitLook(int type, int guid);
     /** Animation for a graphics key, same layout as unitAnimation. */
     public static native int[] lookAnimation(String key, int direction);
+    /** Tiles of all rooms the game keeps active (any level), layout as levelTiles. */
+    public static native int[] activeTiles(long act);
 }

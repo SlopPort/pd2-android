@@ -413,3 +413,30 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_lookAnimation(
 	for (size_t i = 0; i <= f[4].size() && c < 16; ++i) if (i == f[4].size() || f[4][i] == ',') { armor[c++] = f[4].substr(start, i - start); start = i + 1; }
 	return compositeAnimation(env, f[0], f[1], f[2], f[3], armor, dir);
 }
+
+// Tiles of every room the game keeps active (around the players), whatever its level: this is what
+// D2Client draws, so crossing into the next level is seamless. Same layout as levelTiles.
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_activeTiles(JNIEnv* env, jclass, jlong act) {
+	EnvScope scope(env);
+	D2DrlgActStrc* pAct = (D2DrlgActStrc*)(intptr_t)act;
+	if (!pAct || !pAct->pDrlg) return nullptr;
+	std::vector<jint> v;
+	for (D2DrlgLevelStrc* pLevel = pAct->pDrlg->pLevel; pLevel; pLevel = pLevel->pNextLevel) {
+		for (D2DrlgRoomStrc* r = pLevel->pFirstRoomEx; r; r = r->pDrlgRoomNext) {
+			if (!r->pRoom) continue;
+			for (int layer = 0; layer < 3; ++layer) {
+				int n = 0;
+				D2DrlgTileDataStrc* t = layer == 0 ? DUNGEON_GetFloorTilesFromRoom(r->pRoom, &n)
+					: layer == 1 ? DUNGEON_GetWallTilesFromRoom(r->pRoom, &n) : DUNGEON_GetRoofTilesFromRoom(r->pRoom, &n);
+				for (int i = 0; i < n; ++i) {
+					if (!t[i].pTile) continue;
+					v.push_back(layer); v.push_back(t[i].nPosX + r->nTileXPos); v.push_back(t[i].nPosY + r->nTileYPos);
+					v.push_back(t[i].pTile->nType); v.push_back(tileKey(t[i].pTile)); v.push_back((jint)t[i].dwFlags);
+				}
+			}
+		}
+	}
+	jintArray out = env->NewIntArray((jsize)v.size());
+	env->SetIntArrayRegion(out, 0, (jsize)v.size(), v.data());
+	return out;
+}

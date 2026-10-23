@@ -36,6 +36,10 @@ public final class GameActivity extends Activity {
     private TextView status;
     private Stick stick;
     private final Looks looks = new Looks();
+    // Shared by the game thread (fills) and the UI thread (draws).
+    private final java.util.Map<Integer, android.graphics.Bitmap> tileImages = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
+    private final java.util.Map<Integer, int[]> tileOffsets = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
+    private int worldSignature;
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -67,11 +71,22 @@ public final class GameActivity extends Activity {
             // A new single-player game run by D2Game, as the original client created one.
             act = D2Native.startGame(4, 0);
             if (act == 0) throw new java.io.IOException("D2Game nie utworzył gry (logcat D2Native)");
-            showLevelOfPlayer();
             nativeThread.scheduleAtFixedRate(this::gameFrame, FRAME_MS, FRAME_MS, TimeUnit.MILLISECONDS);
         } catch (Exception ex) {
             runOnUiThread(() -> status.setText("Błąd: " + ex.getMessage()));
         }
+    }
+
+    /** Rebuilds the drawn world when the set of active rooms changed (rooms come and go as the hero walks). */
+    private void refreshWorld() {
+        int[] t = D2Native.activeTiles(act);
+        if (t == null) return;
+        int sig = t.length * 31 + (t.length > 6 ? t[1] * 7 + t[2] * 13 + t[t.length - 5] * 17 + t[t.length - 4] : 0);
+        if (sig == worldSignature) return;
+        worldSignature = sig;
+        LevelView.Level lv = LevelView.fromActiveRooms(act, tileImages, tileOffsets);
+        int[] s = D2Native.serverPlayer();
+        if (lv != null) runOnUiThread(() -> { view.setLevel(lv); status.setText("Poziom " + s[6]); });
     }
 
     private void showLevelOfPlayer() {
@@ -115,7 +130,7 @@ public final class GameActivity extends Activity {
             view.heroFrame = hero != null ? hero.frame : null;
             view.heroX = hx; view.heroY = hy;
             view.postInvalidateOnAnimation();
-            if (s[6] != levelShown && s[6] != 0) showLevelOfPlayer();
+            if (frame % 10 == 0) refreshWorld();
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }
