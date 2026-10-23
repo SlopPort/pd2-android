@@ -19,6 +19,7 @@
 | `D2MOVE=1` | player movement through D2Common paths only (no server) |
 | `D2LEVEL=n` | writes `collision.pgm` and `tiles.ppm` of level n to `/data/local/tmp` |
 | `D2DIRS=1` | prints D2 directions for 8 vectors |
+| `D2EXIT=1` (with `D2SERVER`) | tries to walk the hero from the camp towards Blood Moor in 20-subtile legs (currently stops at the palisade: needs a route planner) |
 | `D2TXT=1` | compile tables from `.txt` instead of PD2's `.bin` |
 | 3rd argument | directory with reference `.bin` files: compares our compiled tables |
 

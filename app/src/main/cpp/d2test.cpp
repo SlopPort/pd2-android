@@ -17,6 +17,8 @@
 #include <Drlg/D2DrlgPreset.h>
 #include <unistd.h>
 #include <csignal>
+#include <algorithm>
+#include <cstdlib>
 #include <cstdio>
 #include <vector>
 extern "C" void d2native_set_data_root(const char* root);
@@ -68,7 +70,7 @@ int main(int argc, char** argv) {
 	if (getenv("D2SERVER")) {
 		// A hang becomes an abort with a stack in logcat.
 		signal(SIGALRM, [](int) { abort(); });
-		alarm(25);
+		alarm(getenv("D2EXIT") ? 140 : 25);
 		// Full D2Game: new single-player game, the player walks, server frames run.
 		if (!sgame_create("Tester", 4, 0)) { printf("game not created\n"); return 1; }
 		int s[9];
@@ -87,6 +89,41 @@ int main(int argc, char** argv) {
 			sgame_tick();
 			sgame_player_state(s);
 			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
+		}
+		if (getenv("D2EXIT")) {
+			// Walk out of the camp: target = centre of the first Blood Moor room touching a camp room.
+			D2DrlgActStrc* pServerAct = sgame_act();
+			D2DrlgLevelStrc* pCamp = DRLG_GetLevel(pServerAct->pDrlg, 1);
+			D2DrlgLevelStrc* pMoor = DRLG_GetLevel(pServerAct->pDrlg, 2);
+			int tx = 0, ty = 0;
+			for (D2DrlgRoomStrc* a = pCamp->pFirstRoomEx; a && !tx; a = a->pDrlgRoomNext)
+				for (D2DrlgRoomStrc* b = pMoor->pFirstRoomEx; b && !tx; b = b->pDrlgRoomNext)
+					if (a->nTileXPos <= b->nTileXPos + b->nTileWidth && b->nTileXPos <= a->nTileXPos + a->nTileWidth &&
+						a->nTileYPos <= b->nTileYPos + b->nTileHeight && b->nTileYPos <= a->nTileYPos + a->nTileHeight) {
+						tx = (b->nTileXPos + b->nTileWidth / 2) * 5; ty = (b->nTileYPos + b->nTileHeight / 2) * 5;
+					}
+			printf("exit target %d,%d (camp %d,%d %dx%d)\n", tx, ty, pCamp->nPosX, pCamp->nPosY, pCamp->nWidth, pCamp->nHeight);
+			int lastLevel = 0;
+			for (int f = 0; f < 25 * 90 && tx; ++f) {
+				if (f % 10 == 0) {
+					sgame_player_state(s);
+					int dx = tx - s[0], dy = ty - s[1];
+					int d = std::max(std::abs(dx), std::abs(dy));
+					if (d > 20) { dx = dx * 20 / d; dy = dy * 20 / d; }
+					sgame_move(s[0] + dx, s[1] + dy, true);
+				}
+				usleep(40000);
+				sgame_tick();
+				sgame_player_state(s);
+				if (s[6] != lastLevel) { printf("frame %d: level %d at %d,%d\n", f, s[6], s[0], s[1]); lastLevel = s[6]; }
+				if (f % 250 == 0) printf("frame %d: at %d,%d mode %d\n", f, s[0], s[1], s[4]);
+				if (lastLevel == 2 && f % 125 == 0) {
+					int nMon = 0;
+					sgame_units(units);
+					for (size_t i = 0; i + 7 < units.size(); i += 8) if (units[i] == 1) ++nMon;
+					printf("  monsters in game: %d\n", nMon);
+				}
+			}
 		}
 		printf("units after: %d\n", sgame_units(units));
 		{
