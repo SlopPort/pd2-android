@@ -644,6 +644,30 @@ index 1194066..9ab8278 100644
  
      D2PartyControlStrc* pPartyControl = D2_ALLOC_STRC_POOL(pGame->pMemoryPool, D2PartyControlStrc);
      D2_ASSERT(pPartyControl);
+diff --git a/source/D2Game/src/UNIT/SUnitInactive.cpp b/source/D2Game/src/UNIT/SUnitInactive.cpp
+index b0ac6ca..1ce21b8 100644
+--- a/source/D2Game/src/UNIT/SUnitInactive.cpp
++++ b/source/D2Game/src/UNIT/SUnitInactive.cpp
+@@ -694,7 +694,9 @@ void __fastcall SUNITINACTIVE_CompressUnitIfNeeded(D2GameStrc* pGame, D2UnitStrc
+ 			bCompress = 1;
+ 		}
+ 
+-		switch (pUnit->dwUnitType)
++		// Read before the switch: compressing an item frees it (the original kept the type in a register).
++		const int32_t nUnitType = pUnit->dwUnitType;
++		switch (nUnitType)
+ 		{
+ 		case UNIT_PLAYER:
+ 		{
+@@ -755,7 +757,7 @@ void __fastcall SUNITINACTIVE_CompressUnitIfNeeded(D2GameStrc* pGame, D2UnitStrc
+ 			break;
+ 		}
+ 
+-		if (pUnit->dwUnitType != UNIT_ITEM)
++		if (nUnitType != UNIT_ITEM)
+ 		{
+ 			SUNIT_RemoveUnit(pGame, pUnit);
+ 		}
 diff --git a/source/Fog/include/Fog.h b/source/Fog/include/Fog.h
 index ad15c43..61e48ec 100644
 --- a/source/Fog/include/Fog.h

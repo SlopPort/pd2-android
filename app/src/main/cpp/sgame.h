@@ -22,3 +22,6 @@ int sgame_player_life();
 void sgame_unit_combat_stats(int nType, int nGuid, int* out);
 // Fixed game seed for repeatable tests (-1 = random).
 void sgame_set_seed(int nSeed);
+
+// Left skill on a unit (packet 0x06).
+void sgame_attack(int nType, int nGuid);

@@ -107,20 +107,33 @@ int main(int argc, char** argv) {
 			printf("exit target %d,%d (camp %d,%d %dx%d)\n", tx, ty, pCamp->nPosX, pCamp->nPosY, pCamp->nWidth, pCamp->nHeight);
 			int lastLevel = 0;
 			std::vector<RoutePoint> route;
+			int target = -1, attacks = 0;
 			for (int f = 0; f < 25 * 90 && tx; ++f) {
-				if (f % 50 == 0) {
+				if (f % 25 == 0) {
+					bool attackedNow = false;
 					sgame_player_state(s);
 					if (lastLevel == 2) {
 						// In Blood Moor: head for the nearest hostile monster (not town NPCs 146-179).
 						sgame_units(units);
 						long bestD = 1L << 30;
+						target = -1;
 						for (size_t i = 0; i + 7 < units.size(); i += 8) {
-							if (units[i] != 1 || (units[i + 1] >= 146 && units[i + 1] <= 179)) continue;
+							// Alive only: monster modes 0 (death) and 12 (dead) are skipped.
+							if (units[i] != 1 || (units[i + 1] >= 146 && units[i + 1] <= 179) || units[i + 5] == 0 || units[i + 5] == 12) continue;
 							long d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
-							if (d < bestD) { bestD = d; tx = units[i + 3]; ty = units[i + 4]; }
+							if (d < bestD) { bestD = d; tx = units[i + 3]; ty = units[i + 4]; target = units[i + 2]; }
+						}
+						if (target >= 0 && bestD <= 4) {
+							int ms[6];
+							sgame_unit_combat_stats(1, target, ms);
+							printf("frame %d: attack monster %d (life %d), hero life %d\n", f, target, ms[5], sgame_player_life());
+							sgame_attack(1, target);
+							route.clear();
+							attackedNow = true;
+							++attacks;
 						}
 					}
-					route = test_plan_route(pServerAct, s[0], s[1], tx, ty, 90, lastLevel == 2 ? 0 : 2);
+					if (!attackedNow) route = test_plan_route(pServerAct, s[0], s[1], tx, ty, 90, lastLevel == 2 ? 0 : 2);
 					if (f % 250 == 0) printf("  route %zu steps, ends %d,%d\n", route.size(), route.empty() ? 0 : route.back().x, route.empty() ? 0 : route.back().y);
 				}
 				if (f % 10 == 0 && !route.empty()) {

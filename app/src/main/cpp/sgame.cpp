@@ -222,3 +222,12 @@ void sgame_unit_combat_stats(int nType, int nGuid, int* out) {
 
 // Fixed game seed for repeatable tests (D2Game's own switch; -1 = random as in normal play).
 void sgame_set_seed(int nSeed) { GAME_SetInitSeed(nSeed); }
+
+// Left skill on a unit (packet 0x06), as the client sends when the player clicks a monster.
+void sgame_attack(int nType, int nGuid) {
+	if (!sgame_ready()) return;
+	D2GSPacketClt06 p = {};
+	p.nHeader = 0x06;
+	p.dwUnitType = (uint32_t)nType; p.dwUnitGUID = (uint32_t)nGuid;
+	loopback_send(1, kClientId, &p, sizeof p);
+}
