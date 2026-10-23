@@ -166,11 +166,12 @@ public final class GameActivity extends Activity {
     }
 
     /** Index in serverUnits() of the nearest living hostile monster (not town NPCs 146-179), or -1. */
-    private static int nearestMonster(int[] u, int[] s, int[] distOut) {
+    private int nearestMonster(int[] u, int[] s, int[] distOut) {
         int best = -1, bestD = Integer.MAX_VALUE;
         for (int i = 0; i + 7 < u.length; i += 8) {
             // Monster modes 0 (death) and 12 (dead).
             if (u[i] != 1 || (u[i + 1] >= 146 && u[i + 1] <= 179) || u[i + 5] == 0 || u[i + 5] == 12) continue;
+            if (unreachable.contains(u[i + 2])) continue;
             int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
             if (d < bestD) { bestD = d; best = i; }
         }
@@ -196,7 +197,11 @@ public final class GameActivity extends Activity {
         // Not moving for a few calls (wall in the way of a straight-ish route): try the next point.
         stuckCalls = s[0] == lastX && s[1] == lastY ? stuckCalls + 1 : 0;
         lastX = s[0]; lastY = s[1];
-        if (stuckCalls >= 4) { stuckCalls = 0; exploreIndex++; best = -1; }
+        if (stuckCalls >= 4) {
+            stuckCalls = 0;
+            if (best >= 0) unreachable.add(u[best + 2]); else exploreIndex++;
+            return true;
+        }
         if (best >= 0 && D2Native.devWalkToPoint(u[best + 3], u[best + 4], run)) return true;
         // None loaded, or none reachable from here (e.g. across the river): explore the hero's level, visiting points spread over it in turn; a point
         // that cannot be got closer to (river, cliff) is skipped.
@@ -213,6 +218,8 @@ public final class GameActivity extends Activity {
 
     private static final float[][] EXPLORE = {{0.5f, 0.5f}, {0.2f, 0.2f}, {0.8f, 0.2f}, {0.8f, 0.8f}, {0.2f, 0.8f}};
     private int exploreIndex, stuckCalls, lastX, lastY;
+    /** Monsters the dev helper got stuck walking to (walls between); skipped from then on. */
+    private final java.util.Set<Integer> unreachable = new java.util.HashSet<>();
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
         Looks.Anim a = looks.get(D2Native.unitLook(type, guid), dir64);

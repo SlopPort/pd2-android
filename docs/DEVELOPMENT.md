@@ -60,3 +60,11 @@ A hang can be turned into a crash dump: `d2test` with `D2SERVER` aborts itself a
 - On Windows with Git Bash: set `MSYS_NO_PATHCONV=1` for adb device paths, but never in the shell
   that runs `cmd //c gradle.bat` (the build silently does nothing).
 - When two phones are attached, always pass `adb -s <serial>`.
+
+## Fixed seed in the app
+
+`adb -s <device> shell am start -n pl.d2port/.GameActivity --ei seed 777` starts the app's game with
+seed 777 (same camp and Blood Moor as the d2test reference run). With "Bieg", "→ poziom 2 (dev)" and
+then "→ potwór (dev)" the hero reaches the Fallen packs and kills them (the helper attacks within 4
+subtiles, skips monsters it gets stuck walking to, and explores the level otherwise). "Atak" (bottom
+right), held, attacks the nearest monster within 5 subtiles.
