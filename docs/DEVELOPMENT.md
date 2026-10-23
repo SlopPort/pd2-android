@@ -74,4 +74,5 @@ right), held, attacks the nearest monster within 5 subtiles.
 `FOG_DisplayAssert` (fog_android.cpp) logs and then traps, so an assert leaves a tombstone whose
 stack `srv.sh`-style addr2line runs can symbolise (D2 code would `exit(-1)` right after it anyway).
 After frame 1300 the D2EXIT test stops hunting and picks up the loot nearby, printing gold and the
-number of inventory items.
+number of inventory items. With `D2DEATH=1` the hero's life is set to 1 at the first attack; the test
+waits for PLRMODE_DEAD, sends packet 0x41 and checks the hero is back in the camp with full life.

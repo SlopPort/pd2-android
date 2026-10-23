@@ -112,6 +112,14 @@ int main(int argc, char** argv) {
 				if (f % 25 == 0) {
 					bool attackedNow = false;
 					sgame_player_state(s);
+					if (s[4] == 17) { // PLRMODE_DEAD
+						printf("frame %d: hero dead at %d,%d (level %d), resurrecting\n", f, s[0], s[1], s[6]);
+						sgame_resurrect();
+						for (int k = 0; k < 10; ++k) { usleep(40000); sgame_tick(); }
+						sgame_player_state(s);
+						printf("  after resurrect: level %d at %d,%d mode %d life %d\n", s[6], s[0], s[1], s[4], sgame_player_life());
+						break;
+					}
 					if (lastLevel == 2 && f >= 1300) {
 						// After the first fights: pick up the loot nearby (packet 0x13, D2Game walks there).
 						sgame_units(units);
@@ -143,6 +151,7 @@ int main(int argc, char** argv) {
 							int ms[6];
 							sgame_unit_combat_stats(1, target, ms);
 							printf("frame %d: attack monster %d (life %d), hero life %d\n", f, target, ms[5], sgame_player_life());
+							if (getenv("D2DEATH") && !attacks) sgame_debug_set_life(1); // let the pack kill the hero
 							sgame_attack(1, target);
 							route.clear();
 							attackedNow = true;

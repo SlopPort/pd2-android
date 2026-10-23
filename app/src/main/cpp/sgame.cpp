@@ -282,3 +282,16 @@ void sgame_player_goods(int* out) {
 		if (u->pInventory) for (D2UnitStrc* i = INVENTORY_GetFirstItem(u->pInventory); i; i = INVENTORY_GetNextItem(i)) ++out[1];
 	});
 }
+
+// After death: the client's "press Esc to continue" (packet 0x41); D2Game revives the hero in town.
+void sgame_resurrect() {
+	D2GSPacketClt41 p = {0x41};
+	loopback_send(1, kClientId, &p, sizeof p);
+}
+
+// Test only: set the hero's current life (points).
+void sgame_debug_set_life(int nLife) {
+	withGame([&](D2GameStrc* pGame) {
+		if (D2UnitStrc* u = player(pGame)) STATLIST_SetUnitStat(u, STAT_HITPOINTS, nLife << 8, 0);
+	});
+}

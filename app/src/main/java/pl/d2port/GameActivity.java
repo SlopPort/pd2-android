@@ -40,6 +40,7 @@ public final class GameActivity extends Activity {
     private TextView status;
     private Stick stick;
     private volatile boolean attackHeld, pickRequested;
+    private boolean deadShown;
     private final Looks looks = new Looks();
     // Shared by the game thread (fills) and the UI thread (draws).
     private final java.util.Map<Integer, android.graphics.Bitmap> tileImages = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -154,6 +155,12 @@ public final class GameActivity extends Activity {
             }
             if (devWalkLevel > 0 && frame % 10 == 0 && dir == null && !D2Native.devWalkToLevel(devWalkLevel, run)) devWalkLevel = 0;
             if (devWalkMonster && frame % 10 == 0 && dir == null) devWalkMonster = walkToNearestMonster();
+            int[] me = D2Native.serverPlayer();
+            if (me[4] == 17) { // PLRMODE_DEAD: D2 waits for Esc; here the attack button continues
+                if (!deadShown) { deadShown = true; runOnUiThread(() -> status.setText("Zginąłeś — naciśnij Atak")); }
+                devWalkMonster = false; devWalkLevel = 0;
+                if (attackHeld) { attackHeld = false; deadShown = false; D2Native.serverResurrect(); }
+            } else
             if (attackHeld && frame % 5 == 0) attackNearest(5);
             if (pickRequested) { pickRequested = false; pickNearest(20); }
             D2Native.serverTick();

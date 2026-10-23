@@ -38,3 +38,8 @@ void sgame_interact(int nType, int nGuid);
 
 // Diagnostics: {gold, inventory item count}.
 void sgame_player_goods(int* out);
+
+// After death: revive in town (packet 0x41).
+void sgame_resurrect();
+// Test only: set the hero's current life.
+void sgame_debug_set_life(int nLife);
