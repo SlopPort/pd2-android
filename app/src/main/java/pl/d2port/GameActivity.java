@@ -39,7 +39,8 @@ public final class GameActivity extends Activity {
     private LevelView view;
     private TextView status;
     private Stick stick;
-    private volatile boolean attackHeld, pickRequested;
+    private volatile boolean attackHeld, pickRequested, inventoryOpen;
+    private InventoryView inventory;
     private boolean deadShown;
     private final Looks looks = new Looks();
     // Shared by the game thread (fills) and the UI thread (draws).
@@ -56,6 +57,9 @@ public final class GameActivity extends Activity {
         root.addView(view);
         stick = new Stick(this);
         root.addView(stick);
+        inventory = new InventoryView(this);
+        inventory.setVisibility(View.GONE);
+        root.addView(inventory);
         LinearLayout bar = new LinearLayout(this);
         status = new TextView(this); status.setTextColor(Color.WHITE); status.setPadding(16, 8, 16, 8);
         Button runButton = new Button(this); runButton.setAllCaps(false); runButton.setText("Bieg: wył.");
@@ -64,7 +68,9 @@ public final class GameActivity extends Activity {
         walk.setOnClickListener(v -> devWalkLevel = devWalkLevel == 0 ? 2 : 0);
         Button hunt = new Button(this); hunt.setAllCaps(false); hunt.setText("→ potwór (dev)");
         hunt.setOnClickListener(v -> devWalkMonster = !devWalkMonster);
-        bar.addView(runButton); bar.addView(walk); bar.addView(hunt); bar.addView(status);
+        Button invButton = new Button(this); invButton.setAllCaps(false); invButton.setText("Ekwipunek");
+        invButton.setOnClickListener(v -> { inventoryOpen = !inventoryOpen; inventory.setVisibility(inventoryOpen ? View.VISIBLE : View.GONE); });
+        bar.addView(runButton); bar.addView(walk); bar.addView(hunt); bar.addView(invButton); bar.addView(status);
         root.addView(bar);
         // Attack, PD2 controller style: held, it keeps hitting the nearest monster in reach.
         Button attack = new Button(this); attack.setAllCaps(false); attack.setText("Atak");
@@ -189,6 +195,7 @@ public final class GameActivity extends Activity {
             if (frame % 10 == 0) refreshWorld();
             if (frame % 25 == 5) automap.update(act);
             if (frame % 5 == 0) view.vitals = D2Native.serverVitals();
+            if (inventoryOpen && frame % 10 == 0) inventory.update();
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }

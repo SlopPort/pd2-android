@@ -43,3 +43,10 @@ void sgame_player_goods(int* out);
 void sgame_resurrect();
 // Test only: set the hero's current life.
 void sgame_debug_set_life(int nLife);
+
+// One item of the hero's inventory (see sgame_inventory).
+struct InvItem { std::string file; int page, bodyLoc, x, y, w, h; };
+#include <vector>
+void sgame_inventory(std::vector<InvItem>& out);
+// Inventory panel layout (800x600) from inventory.txt; out has 72 ints (see sgame.cpp).
+bool sgame_inventory_layout(int* out);

@@ -295,3 +295,54 @@ void sgame_debug_set_life(int nLife) {
 		if (D2UnitStrc* u = player(pGame)) STATLIST_SetUnitStat(u, STAT_HITPOINTS, nLife << 8, 0);
 	});
 }
+
+// The hero's items as the inventory panel needs them: {invfile, page, body location, x, y, w, h}
+// per item. x/y are grid cells (the item's static path in inventories).
+void sgame_inventory(std::vector<InvItem>& out) {
+	out.clear();
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = player(pGame);
+		if (!u || !u->pInventory) return;
+		for (D2UnitStrc* i = INVENTORY_GetFirstItem(u->pInventory); i; i = INVENTORY_GetNextItem(i)) {
+			D2ItemsTxt* r = DATATBLS_GetItemsTxtRecord(i->dwClassId);
+			if (!r) continue;
+			InvItem it;
+			it.file = std::string("DATA\\GLOBAL\\ITEMS\\") + r->szInvFile + ".DC6";
+			it.page = ITEMS_GetInvPage(i);
+			it.bodyLoc = ITEMS_GetBodyLocation(i);
+			D2CoordStrc c = {};
+			UNITS_GetCoords(i, &c);
+			it.x = c.nX; it.y = c.nY;
+			it.w = r->nInvWidth; it.h = r->nInvHeight;
+			out.push_back(it);
+		}
+	});
+}
+
+#include <DataTbls/InvTbls.h>
+
+// The hero's inventory panel in 800x600 from inventory.txt: panel rect (4), grid {cols, rows, left,
+// right, top, bottom, box w, box h} (8), then per body component {left, right, top, bottom, w, h} (10 x 6).
+bool sgame_inventory_layout(int* out) {
+	bool ok = false;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = player(pGame);
+		if (!u) return;
+		const int id = UNITS_GetInventoryRecordId(u, INVPAGE_INVENTORY, TRUE);
+		D2InvRectStrc r = {};
+		DATATBLS_GetInventoryRect(id, 1, &r);
+		out[0] = r.nLeft; out[1] = r.nRight; out[2] = r.nTop; out[3] = r.nBottom;
+		D2InventoryGridInfoStrc g = {};
+		DATATBLS_GetInventoryGridInfo(id, 1, &g);
+		int* o = out + 4;
+		o[0] = g.nGridX; o[1] = g.nGridY; o[2] = g.nGridLeft; o[3] = g.nGridRight; o[4] = g.nGridTop; o[5] = g.nGridBottom; o[6] = g.nGridBoxWidth; o[7] = g.nGridBoxHeight;
+		for (int c = 0; c < NUM_INV_COMPS; ++c) {
+			D2InvCompGridStrc cg = {};
+			DATATBLS_GetInventoryComponentGrid(id, 1, &cg, c);
+			int* p = out + 12 + c * 6;
+			p[0] = cg.rect.nLeft; p[1] = cg.rect.nRight; p[2] = cg.rect.nTop; p[3] = cg.rect.nBottom; p[4] = cg.nWidth; p[5] = cg.nHeight;
+		}
+		ok = true;
+	});
+	return ok;
+}

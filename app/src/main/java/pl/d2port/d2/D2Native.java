@@ -100,6 +100,8 @@ public final class D2Native {
     public static native int[] automapCells(long act);
     /** All frames of a DC6 file (game path): {count, then per frame width, height, offX, offY, argb...}. */
     public static native int[] dc6Frames(String path);
+    /** Hero inventory: {int[72] panel layout (inventory.txt, 800x600), String[] item DC6s, int[] per item {page, body location, x, y, w, h}}. */
+    public static native Object[] inventory();
     /** Developer helper: one walk command along a route towards a level (false when there or no route). */
     public static native boolean devWalkToLevel(int level, boolean run);
     /** Developer helper: one walk command along a route towards a subtile (false when there or no route). */

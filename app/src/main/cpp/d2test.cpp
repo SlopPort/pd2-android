@@ -133,6 +133,13 @@ int main(int argc, char** argv) {
 						int goods[2];
 						sgame_player_goods(goods);
 						printf("frame %d: loot within 30: %d, gold %d, inventory items %d\n", f, nGround, goods[0], goods[1]);
+						static bool invShown;
+						if (nGround == 0 && !invShown) {
+							invShown = true;
+							std::vector<InvItem> inv;
+							sgame_inventory(inv);
+							for (const InvItem& it : inv) printf("  item %s page %d body %d at %d,%d size %dx%d\n", it.file.c_str(), it.page, it.bodyLoc, it.x, it.y, it.w, it.h);
+						}
 						if (best >= 0) sgame_interact(4, best);
 						route.clear();
 						attackedNow = true;

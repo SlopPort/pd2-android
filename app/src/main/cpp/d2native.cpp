@@ -564,3 +564,29 @@ extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToPoint(
 	sgame_move(p.x, p.y, run);
 	return JNI_TRUE;
 }
+
+// ------------------------------------------------------------------ inventory panel
+
+// {int[72] layout, String[] item graphics, int[] per item {page, body location, x, y, w, h}}.
+extern "C" JNIEXPORT jobjectArray JNICALL Java_pl_d2port_d2_D2Native_inventory(JNIEnv* env, jclass) {
+	EnvScope scope(env);
+	jint layout[72];
+	if (!sgame_inventory_layout((int*)layout)) return nullptr;
+	std::vector<InvItem> items;
+	sgame_inventory(items);
+	jobjectArray out = env->NewObjectArray(3, env->FindClass("java/lang/Object"), nullptr);
+	jintArray l = env->NewIntArray(72);
+	env->SetIntArrayRegion(l, 0, 72, layout);
+	env->SetObjectArrayElement(out, 0, l);
+	jobjectArray files = env->NewObjectArray((jsize)items.size(), env->FindClass("java/lang/String"), nullptr);
+	std::vector<jint> data;
+	for (size_t i = 0; i < items.size(); ++i) {
+		env->SetObjectArrayElement(files, (jsize)i, env->NewStringUTF(items[i].file.c_str()));
+		data.insert(data.end(), {items[i].page, items[i].bodyLoc, items[i].x, items[i].y, items[i].w, items[i].h});
+	}
+	env->SetObjectArrayElement(out, 1, files);
+	jintArray d = env->NewIntArray((jsize)data.size());
+	env->SetIntArrayRegion(d, 0, (jsize)data.size(), data.data());
+	env->SetObjectArrayElement(out, 2, d);
+	return out;
+}
