@@ -39,7 +39,7 @@ public final class GameActivity extends Activity {
     private LevelView view;
     private TextView status;
     private Stick stick;
-    private volatile boolean attackHeld;
+    private volatile boolean attackHeld, pickRequested;
     private final Looks looks = new Looks();
     // Shared by the game thread (fills) and the UI thread (draws).
     private final java.util.Map<Integer, android.graphics.Bitmap> tileImages = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -76,6 +76,11 @@ public final class GameActivity extends Activity {
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(260, 260, android.view.Gravity.BOTTOM | android.view.Gravity.END);
         lp.setMargins(0, 0, 60, 60);
         root.addView(attack, lp);
+        Button pick = new Button(this); pick.setAllCaps(false); pick.setText("Podnieś");
+        pick.setOnClickListener(v -> pickRequested = true);
+        FrameLayout.LayoutParams lp2 = new FrameLayout.LayoutParams(260, 140, android.view.Gravity.BOTTOM | android.view.Gravity.END);
+        lp2.setMargins(0, 0, 60, 340);
+        root.addView(pick, lp2);
         root.setFitsSystemWindows(true);
         setContentView(root);
         status.setText("Wczytywanie…");
@@ -150,6 +155,7 @@ public final class GameActivity extends Activity {
             if (devWalkLevel > 0 && frame % 10 == 0 && dir == null && !D2Native.devWalkToLevel(devWalkLevel, run)) devWalkLevel = 0;
             if (devWalkMonster && frame % 10 == 0 && dir == null) devWalkMonster = walkToNearestMonster();
             if (attackHeld && frame % 5 == 0) attackNearest(5);
+            if (pickRequested) { pickRequested = false; pickNearest(20); }
             D2Native.serverTick();
             int[] s = D2Native.serverPlayer();
             java.util.List<LevelView.Sprite> list = new java.util.ArrayList<>();
@@ -193,6 +199,18 @@ public final class GameActivity extends Activity {
         }
         distOut[0] = bestD;
         return best;
+    }
+
+    /** Interacts with (picks up) the nearest item on the ground within reach subtiles. */
+    private void pickNearest(int reach) {
+        int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits();
+        int best = -1, bestD = reach + 1;
+        for (int i = 0; i + 7 < u.length; i += 8) {
+            if (u[i] != 4) continue;
+            int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
+            if (d < bestD && D2Native.groundItemFile(u[i + 2]) != null) { bestD = d; best = i; }
+        }
+        if (best >= 0) D2Native.serverInteract(4, u[best + 2]);
     }
 
     /** Left skill (attack) on the nearest monster within reach subtiles. */

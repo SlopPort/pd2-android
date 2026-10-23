@@ -68,3 +68,10 @@ seed 777 (same camp and Blood Moor as the d2test reference run). With "Bieg", "�
 then "→ potwór (dev)" the hero reaches the Fallen packs and kills them (the helper attacks within 4
 subtiles, skips monsters it gets stuck walking to, and explores the level otherwise). "Atak" (bottom
 right), held, attacks the nearest monster within 5 subtiles.
+
+## Asserts
+
+`FOG_DisplayAssert` (fog_android.cpp) logs and then traps, so an assert leaves a tombstone whose
+stack `srv.sh`-style addr2line runs can symbolise (D2 code would `exit(-1)` right after it anyway).
+After frame 1300 the D2EXIT test stops hunting and picks up the loot nearby, printing gold and the
+number of inventory items.

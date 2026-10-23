@@ -260,3 +260,25 @@ void sgame_player_vitals(int* out) {
 		out[3] = STATLIST_GetMaxManaFromUnit(u) >> 8;
 	});
 }
+
+// Interact with a unit (packet 0x13), as a click on an item, NPC or object: D2Game walks the hero
+// there if needed, then picks up / talks / operates.
+void sgame_interact(int nType, int nGuid) {
+	if (!sgame_ready()) return;
+	D2GSPacketClt13 p = {};
+	p.nHeader = 0x13;
+	p.dwUnitType = (uint32_t)nType; p.dwUnitGUID = (uint32_t)nGuid;
+	loopback_send(1, kClientId, &p, sizeof p);
+}
+
+// Diagnostics: gold carried by the hero and number of items in his inventory.
+void sgame_player_goods(int* out) {
+	out[0] = out[1] = -1;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = player(pGame);
+		if (!u) return;
+		out[0] = STATLIST_UnitGetStatValue(u, STAT_GOLD, 0);
+		out[1] = 0;
+		if (u->pInventory) for (D2UnitStrc* i = INVENTORY_GetFirstItem(u->pInventory); i; i = INVENTORY_GetNextItem(i)) ++out[1];
+	});
+}

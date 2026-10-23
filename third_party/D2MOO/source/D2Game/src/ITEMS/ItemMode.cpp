@@ -5187,6 +5187,10 @@ int32_t __fastcall sub_6FC4A9B0(D2GameStrc* pGame, D2UnitStrc* pUnit, D2UnitStrc
         return 0;
     }
 
+    // The parameter is passed on as sub_6FC42F20's bSkipRequirementCheck (all callers pass 0); the
+    // item goes to the body location that function found. D2MOO placed it at location 0 (none).
+    nBodyLoc = (uint8_t)a3;
+
     if (!INVENTORY_PlaceItemInBodyLoc(pUnit->pInventory, pItem, nBodyLoc))
     {
         FOG_DisplayAssert("0", __FILE__, __LINE__);

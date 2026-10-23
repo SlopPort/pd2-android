@@ -112,7 +112,23 @@ int main(int argc, char** argv) {
 				if (f % 25 == 0) {
 					bool attackedNow = false;
 					sgame_player_state(s);
-					if (lastLevel == 2) {
+					if (lastLevel == 2 && f >= 1300) {
+						// After the first fights: pick up the loot nearby (packet 0x13, D2Game walks there).
+						sgame_units(units);
+						int best = -1, nGround = 0; long bestD = 31;
+						for (size_t i = 0; i + 7 < units.size(); i += 8) {
+							if (units[i] != 4 || sgame_ground_item_file(units[i + 2]).empty()) continue;
+							long d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
+							if (d < 31) ++nGround;
+							if (d < bestD) { bestD = d; best = units[i + 2]; }
+						}
+						int goods[2];
+						sgame_player_goods(goods);
+						printf("frame %d: loot within 30: %d, gold %d, inventory items %d\n", f, nGround, goods[0], goods[1]);
+						if (best >= 0) sgame_interact(4, best);
+						route.clear();
+						attackedNow = true;
+					} else if (lastLevel == 2) {
 						// In Blood Moor: head for the nearest hostile monster (not town NPCs 146-179).
 						sgame_units(units);
 						long bestD = 1L << 30;

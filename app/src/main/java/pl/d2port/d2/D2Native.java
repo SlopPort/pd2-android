@@ -79,6 +79,8 @@ public final class D2Native {
     public static native void serverMove(int x, int y, boolean run);
     /** Left skill (attack) on a unit, packet 0x06. */
     public static native void serverAttack(int type, int guid);
+    /** Interact with a unit (pick up, talk, operate), packet 0x13. */
+    public static native void serverInteract(int type, int guid);
     public static native long serverAct();
     /** Player state like playerState(). */
     public static native int[] serverPlayer();

@@ -17,6 +17,7 @@ D2MOO upstream commit: see `third_party/D2MOO-UPSTREAM.txt`. The full diff of D2
 | `D2Game/src/OBJECTS/ObjRgn.cpp` | object regions stored at `[i]`, not `[0]` | D2MOO put every level's region in slot 0; populating the first non-town room crashed |
 | `D2Game/src/MONSTER/MonsterSpawn.cpp` | implemented `D2GAME_SpawnNormalMonster_6FC68E30` and `MONSTERSPAWN_SetupNormalMods` from their decompilation comments | stubs: no monster or NPC was ever created |
 | `D2Game/src/UNIT/SUnitInactive.cpp` | `SUNITINACTIVE_CompressUnitIfNeeded` reads the unit type once, before compressing | compressing a ground item frees it; D2MOO then read `dwUnitType` from freed memory (the original kept it in a register) and crashed when the hero left loot behind |
+| `D2Game/src/ITEMS/ItemMode.cpp` | `sub_6FC4A9B0` equips the item at the body location `sub_6FC42F20` found | D2MOO passed the caller's 0 (meant as "skip requirement check") on as the body location, so picking up an equippable item asserted |
 
 `UNVERIFIED` in `MonsterSpawn.cpp`: the four offsets `unk_6FD28BC8` used when placing SpawnCol=1
 monsters (frog demons, Act III) are not in D2MOO and are assumed.

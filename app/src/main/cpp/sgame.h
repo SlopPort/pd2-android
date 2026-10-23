@@ -32,3 +32,9 @@ std::string sgame_ground_item_file(int nGuid);
 
 // Hero {life, max life, mana, max mana}.
 void sgame_player_vitals(int* out);
+
+// Interact with a unit (packet 0x13).
+void sgame_interact(int nType, int nGuid);
+
+// Diagnostics: {gold, inventory item count}.
+void sgame_player_goods(int* out);

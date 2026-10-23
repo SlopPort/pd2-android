@@ -20,6 +20,8 @@
 void __cdecl FOG_DisplayAssert(const char* szMsg, const char* szFile, int nLine) {
 	__android_log_print(ANDROID_LOG_FATAL, LOG_TAG, "ASSERT %s (%s:%d)", szMsg, szFile, nLine);
 	fprintf(stderr, "ASSERT %s (%s:%d)\n", szMsg, szFile, nLine);
+	// D2 code follows an assert with exit(-1); trapping here leaves a tombstone with the stack instead.
+	__builtin_trap();
 }
 void __cdecl FOG_DisplayHalt(const char* szMsg, const char* szFile, int nLine) {
 	__android_log_print(ANDROID_LOG_FATAL, LOG_TAG, "HALT %s (%s:%d)", szMsg, szFile, nLine);
