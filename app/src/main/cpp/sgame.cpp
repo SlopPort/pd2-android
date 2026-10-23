@@ -194,3 +194,31 @@ bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& t
 	});
 	return ok;
 }
+
+#include <D2StatList.h>
+
+int sgame_player_life() {
+	int life = -1;
+	withGame([&](D2GameStrc* pGame) {
+		if (D2UnitStrc* u = player(pGame)) life = STATLIST_UnitGetStatValue(u, STAT_HITPOINTS, 0) >> 8;
+	});
+	return life;
+}
+
+// Diagnostics: a unit's key combat stats {level, tohit, mindamage, maxdamage, armorclass, life}.
+void sgame_unit_combat_stats(int nType, int nGuid, int* out) {
+	for (int i = 0; i < 6; ++i) out[i] = -1;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = nType == UNIT_PLAYER && nGuid == 0 ? player(pGame) : SUNIT_GetServerUnit(pGame, nType, nGuid);
+		if (!u) return;
+		out[0] = STATLIST_UnitGetStatValue(u, STAT_LEVEL, 0);
+		out[1] = STATLIST_UnitGetStatValue(u, STAT_TOHIT, 0);
+		out[2] = STATLIST_UnitGetStatValue(u, STAT_MINDAMAGE, 0);
+		out[3] = STATLIST_UnitGetStatValue(u, STAT_MAXDAMAGE, 0);
+		out[4] = STATLIST_UnitGetStatValue(u, STAT_ARMORCLASS, 0);
+		out[5] = STATLIST_UnitGetStatValue(u, STAT_HITPOINTS, 0) >> 8;
+	});
+}
+
+// Fixed game seed for repeatable tests (D2Game's own switch; -1 = random as in normal play).
+void sgame_set_seed(int nSeed) { GAME_SetInitSeed(nSeed); }

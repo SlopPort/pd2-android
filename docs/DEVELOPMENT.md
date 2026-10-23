@@ -19,7 +19,7 @@
 | `D2MOVE=1` | player movement through D2Common paths only (no server) |
 | `D2LEVEL=n` | writes `collision.pgm` and `tiles.ppm` of level n to `/data/local/tmp` |
 | `D2DIRS=1` | prints D2 directions for 8 vectors |
-| `D2EXIT=1` (with `D2SERVER`) | walks the hero from the camp into Blood Moor with the route helper (`route.cpp`: BFS over D2 collision of loaded rooms) and lists monsters near him |
+| `D2EXIT=1` (with `D2SERVER`) | walks the hero from the camp into Blood Moor with the route helper (`route.cpp`: BFS over D2 collision of loaded rooms), then to the nearest monster; prints monster/hero combat stats and hero life. Reference seed **777** (the 2nd argument; the test fixes the game seed with `GAME_SetInitSeed`): Fallen pack, hero life 55 → 51. Some seeds (e.g. 1234) never reach the gate: the 90-subtile planning radius is too small for that camp layout |
 | `D2TXT=1` | compile tables from `.txt` instead of PD2's `.bin` |
 | 3rd argument | directory with reference `.bin` files: compares our compiled tables |
 

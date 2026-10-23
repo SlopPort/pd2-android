@@ -16,3 +16,9 @@ int sgame_units(std::vector<int>& out);
 #include <string>
 // Graphics of a unit (type, guid; guid 0 with type 0 = the player): COF folder, token, mode, weapon class, 16 layer codes.
 bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& token, std::string& mode, std::string& wclass, std::string* armor);
+// Hero life (whole points, STAT_HITPOINTS >> 8); -1 without a game.
+int sgame_player_life();
+// Diagnostics: {level, tohit, mindamage, maxdamage, armorclass, life} of a unit (type 0 guid 0 = player).
+void sgame_unit_combat_stats(int nType, int nGuid, int* out);
+// Fixed game seed for repeatable tests (-1 = random).
+void sgame_set_seed(int nSeed);

@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
 		signal(SIGALRM, [](int) { abort(); });
 		alarm(getenv("D2EXIT") ? 140 : 25);
 		// Full D2Game: new single-player game, the player walks, server frames run.
+		sgame_set_seed((int)seed);
 		if (!sgame_create("Tester", 4, 0)) { printf("game not created\n"); return 1; }
 		int s[9];
 		sgame_player_state(s);
@@ -109,6 +110,16 @@ int main(int argc, char** argv) {
 			for (int f = 0; f < 25 * 90 && tx; ++f) {
 				if (f % 50 == 0) {
 					sgame_player_state(s);
+					if (lastLevel == 2) {
+						// In Blood Moor: head for the nearest hostile monster (not town NPCs 146-179).
+						sgame_units(units);
+						long bestD = 1L << 30;
+						for (size_t i = 0; i + 7 < units.size(); i += 8) {
+							if (units[i] != 1 || (units[i + 1] >= 146 && units[i + 1] <= 179)) continue;
+							long d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
+							if (d < bestD) { bestD = d; tx = units[i + 3]; ty = units[i + 4]; }
+						}
+					}
 					route = test_plan_route(pServerAct, s[0], s[1], tx, ty, 90, lastLevel == 2 ? 0 : 2);
 					if (f % 250 == 0) printf("  route %zu steps, ends %d,%d\n", route.size(), route.empty() ? 0 : route.back().x, route.empty() ? 0 : route.back().y);
 				}
@@ -127,13 +138,19 @@ int main(int argc, char** argv) {
 				sgame_tick();
 				sgame_player_state(s);
 				if (s[6] != lastLevel) { printf("frame %d: level %d at %d,%d\n", f, s[6], s[0], s[1]); lastLevel = s[6]; }
-				if (f % 250 == 0) printf("frame %d: at %d,%d mode %d\n", f, s[0], s[1], s[4]);
+				if (f % 250 == 0) { printf("frame %d: at %d,%d mode %d life %d\n", f, s[0], s[1], s[4], sgame_player_life()); }
 				if (lastLevel == 2 && f % 125 == 0) {
 					sgame_units(units);
 					int nNear = 0;
 					for (size_t i = 0; i + 7 < units.size(); i += 8) {
 						if (units[i] != 1) continue;
 						int d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
+						if (d < 60 && nNear == 0 && f % 250 == 0 && !(units[i + 1] >= 146 && units[i + 1] <= 179)) {
+							int ms[6], ps[6];
+							sgame_unit_combat_stats(1, units[i + 2], ms);
+							sgame_unit_combat_stats(0, 0, ps);
+							printf("  monster stats lvl %d tohit %d dmg %d-%d ac %d life %d | hero lvl %d ac %d life %d\n", ms[0], ms[1], ms[2], ms[3], ms[4], ms[5], ps[0], ps[4], ps[5]);
+						}
 						if (d < 60) { ++nNear; if (nNear <= 8) printf("  monster class %d at %d,%d mode %d (distance %d)\n", units[i + 1], units[i + 3], units[i + 4], units[i + 5], d); }
 					}
 					printf("  monsters within 60 subtiles: %d\n", nNear);
