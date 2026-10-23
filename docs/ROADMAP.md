@@ -19,7 +19,7 @@
 1. **Automap polish** — D2Client also reveals by line of sight and draws level names, exits and
    unit markers; our minimap reveals whole active rooms and shows only the hero.
 2. **Blood Moor** — reached on foot (seamless). D2Game spawns Fallen packs with correct stats; their
-   AI chases and hits the hero (verified in d2test, seed 777) and are drawn in the app with their animations. The hero attacks with packet 0x06 (left skill on unit) and kills them; they drop loot (d2test). In the app: "Atak" button, monsters fight back, corpses stay, loot lies on the ground (items.txt flippy DC6, last frame; centring by half width is unverified against D2Client). Next: picking items up, inventory, hero death, HUD (life/mana).
+   AI chases and hits the hero (verified in d2test, seed 777) and are drawn in the app with their animations. The hero attacks with packet 0x06 (left skill on unit) and kills them; they drop loot (d2test). In the app: "Atak" button, monsters fight back, corpses stay, loot lies on the ground (items.txt flippy DC6, last frame; centring by half width is unverified against D2Client). Life/mana globes from hlthmana.dc6. Next: picking items up, inventory, hero death, the rest of the control panel.
 3. **Combat** — attack/skill packets (0x05-0x11), hit recovery, death, item drops on the ground
    (draw ground items: DC6 `data/global/items` flippy files).
 4. **HUD** — life/mana orbs, belt, skill buttons; read stats from the server unit.

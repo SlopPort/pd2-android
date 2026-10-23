@@ -120,6 +120,28 @@ class LevelView extends View {
             mapArea.set(getWidth() - w - 16, 16, getWidth() - 16, 16 + h);
             am.draw(c, hx, hy, mapArea);
         }
+        // Life and mana globes (hlthmana.dc6: frame 0 life, 1 mana), filled from the bottom.
+        android.graphics.Bitmap[] o = orbs;
+        int[] v = vitals;
+        if (o != null && v != null) {
+            float size = o[0].getHeight() * scale;
+            float y = getHeight() - size - 16;
+            drawOrb(c, o[0], 16, y, size, v[1] > 0 ? (float) v[0] / v[1] : 0);
+            drawOrb(c, o[1], getWidth() - size - 360, y, size, v[3] > 0 ? (float) v[2] / v[3] : 0);
+        }
+    }
+
+    /** Globe graphics and the hero's {life, max, mana, max}; set from the game thread. */
+    volatile android.graphics.Bitmap[] orbs;
+    volatile int[] vitals;
+
+    private void drawOrb(Canvas c, android.graphics.Bitmap b, float x, float y, float size, float fill) {
+        fill = Math.max(0, Math.min(1, fill));
+        float w = b.getWidth() * scale;
+        c.save();
+        c.clipRect(x, y + size * (1 - fill), x + w, y + size);
+        c.drawBitmap(b, null, new android.graphics.RectF(x, y, x + w, y + size), paint);
+        c.restore();
     }
 
     private void drawSprite(Canvas c, Sprite s) {

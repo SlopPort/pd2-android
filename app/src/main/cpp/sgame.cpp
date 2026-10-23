@@ -13,6 +13,7 @@
 #include <Units/Units.h>
 #include <android/log.h>
 #include <cstring>
+#include <strings.h>
 
 namespace {
 const int32_t kClientId = 1;
@@ -171,7 +172,7 @@ bool sgame_unit_look(int nType, int nGuid, std::string& category, std::string& t
 				char s[5] = {0};
 				memcpy(s, &code, 4);
 				for (int k = 3; k >= 0 && (s[k] == ' ' || !s[k]); --k) s[k] = 0;
-				armor[c] = s;
+				armor[c] = strcasecmp(s, "nil") ? s : ""; // "nil": no graphics for this layer
 			}
 		} else {
 			// Body layers in the light set; weapon/shield layers use the code of the item held (e.g. HAX, BUC).
@@ -245,4 +246,17 @@ std::string sgame_ground_item_file(int nGuid) {
 		file = std::string("DATA\\GLOBAL\\ITEMS\\") + r->szFlippyFile + ".DC6";
 	});
 	return file;
+}
+
+// Hero {life, max life, mana, max mana} in points (stats are 8.8 fixed point).
+void sgame_player_vitals(int* out) {
+	for (int i = 0; i < 4; ++i) out[i] = 0;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = player(pGame);
+		if (!u) return;
+		out[0] = STATLIST_UnitGetStatValue(u, STAT_HITPOINTS, 0) >> 8;
+		out[1] = STATLIST_GetMaxLifeFromUnit(u) >> 8;
+		out[2] = STATLIST_UnitGetStatValue(u, STAT_MANA, 0) >> 8;
+		out[3] = STATLIST_GetMaxManaFromUnit(u) >> 8;
+	});
 }

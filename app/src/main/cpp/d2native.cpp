@@ -377,6 +377,15 @@ extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverMove(JNIEnv* 
 extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverAttack(JNIEnv* env, jclass, jint type, jint guid) { EnvScope scope(env); sgame_attack(type, guid); }
 extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_serverAct(JNIEnv* env, jclass) { EnvScope scope(env); return (jlong)(intptr_t)sgame_act(); }
 
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverVitals(JNIEnv* env, jclass) {
+	EnvScope scope(env);
+	jint v[4];
+	sgame_player_vitals((int*)v);
+	jintArray out = env->NewIntArray(4);
+	env->SetIntArrayRegion(out, 0, 4, v);
+	return out;
+}
+
 extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverPlayer(JNIEnv* env, jclass) {
 	EnvScope scope(env);
 	jint s[9];

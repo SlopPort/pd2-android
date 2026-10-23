@@ -74,6 +74,8 @@ public final class D2Native {
     /** The player has entered the game; commands are accepted. */
     public static native boolean serverReady();
     /** Walk/run command to a subtile (client packet 0x01/0x03). */
+    /** Hero {life, max life, mana, max mana}. */
+    public static native int[] serverVitals();
     public static native void serverMove(int x, int y, boolean run);
     /** Left skill (attack) on a unit, packet 0x06. */
     public static native void serverAttack(int type, int guid);

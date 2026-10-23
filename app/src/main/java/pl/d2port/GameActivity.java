@@ -96,6 +96,16 @@ public final class GameActivity extends Activity {
             if (act == 0) throw new java.io.IOException("D2Game nie utworzył gry (logcat D2Native)");
             automap.load();
             view.automap = automap;
+            int[] g = D2Native.dc6Frames("DATA\\GLOBAL\\UI\\PANEL\\HLTHMANA.DC6");
+            if (g != null && g[0] >= 2) {
+                android.graphics.Bitmap[] orbs = new android.graphics.Bitmap[2];
+                for (int i = 0, p = 1; i < 2; i++) {
+                    int w = g[p], h = g[p + 1];
+                    orbs[i] = android.graphics.Bitmap.createBitmap(g, p + 4, w, w, h, android.graphics.Bitmap.Config.ARGB_8888);
+                    p += 4 + w * h;
+                }
+                view.orbs = orbs;
+            }
             nativeThread.scheduleAtFixedRate(this::gameFrame, FRAME_MS, FRAME_MS, TimeUnit.MILLISECONDS);
         } catch (Exception ex) {
             runOnUiThread(() -> status.setText("Błąd: " + ex.getMessage()));
@@ -165,6 +175,7 @@ public final class GameActivity extends Activity {
             view.postInvalidateOnAnimation();
             if (frame % 10 == 0) refreshWorld();
             if (frame % 25 == 5) automap.update(act);
+            if (frame % 5 == 0) view.vitals = D2Native.serverVitals();
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }
