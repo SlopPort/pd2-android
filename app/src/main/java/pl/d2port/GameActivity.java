@@ -39,6 +39,7 @@ public final class GameActivity extends Activity {
     private LevelView view;
     private TextView status;
     private Stick stick;
+    private volatile boolean attackHeld;
     private final Looks looks = new Looks();
     // Shared by the game thread (fills) and the UI thread (draws).
     private final java.util.Map<Integer, android.graphics.Bitmap> tileImages = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
@@ -64,6 +65,17 @@ public final class GameActivity extends Activity {
         hunt.setOnClickListener(v -> devWalkMonster = !devWalkMonster);
         bar.addView(runButton); bar.addView(walk); bar.addView(hunt); bar.addView(status);
         root.addView(bar);
+        // Attack, PD2 controller style: held, it keeps hitting the nearest monster in reach.
+        Button attack = new Button(this); attack.setAllCaps(false); attack.setText("Atak");
+        attack.setOnTouchListener((v, e) -> {
+            int a = e.getActionMasked();
+            if (a == MotionEvent.ACTION_DOWN) attackHeld = true;
+            else if (a == MotionEvent.ACTION_UP || a == MotionEvent.ACTION_CANCEL) attackHeld = false;
+            return false;
+        });
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(260, 260, android.view.Gravity.BOTTOM | android.view.Gravity.END);
+        lp.setMargins(0, 0, 60, 60);
+        root.addView(attack, lp);
         root.setFitsSystemWindows(true);
         setContentView(root);
         status.setText("Wczytywanie…");
@@ -78,6 +90,8 @@ public final class GameActivity extends Activity {
             session = store.open();
             if (!D2Native.init(session.data) || !D2Native.loadPalette(0)) throw new java.io.IOException("Nie udało się wczytać tabel");
             // A new single-player game run by D2Game, as the original client created one.
+            // Developer runs can fix the seed: adb shell am start -n pl.d2port/.GameActivity --ei seed 777
+            D2Native.setGameSeed(getIntent().getIntExtra("seed", -1));
             act = D2Native.startGame(4, 0);
             if (act == 0) throw new java.io.IOException("D2Game nie utworzył gry (logcat D2Native)");
             automap.load();
@@ -125,6 +139,7 @@ public final class GameActivity extends Activity {
             }
             if (devWalkLevel > 0 && frame % 10 == 0 && dir == null && !D2Native.devWalkToLevel(devWalkLevel, run)) devWalkLevel = 0;
             if (devWalkMonster && frame % 10 == 0 && dir == null) devWalkMonster = walkToNearestMonster();
+            if (attackHeld && frame % 5 == 0) attackNearest(5);
             D2Native.serverTick();
             int[] s = D2Native.serverPlayer();
             java.util.List<LevelView.Sprite> list = new java.util.ArrayList<>();
@@ -150,16 +165,38 @@ public final class GameActivity extends Activity {
         }
     }
 
-    /** Developer helper; town NPCs (monstats 146-179) are not targets. */
-    private boolean walkToNearestMonster() {
-        int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits();
+    /** Index in serverUnits() of the nearest living hostile monster (not town NPCs 146-179), or -1. */
+    private static int nearestMonster(int[] u, int[] s, int[] distOut) {
         int best = -1, bestD = Integer.MAX_VALUE;
         for (int i = 0; i + 7 < u.length; i += 8) {
-            if (u[i] != 1 || (u[i + 1] >= 146 && u[i + 1] <= 179) || u[i + 5] == 0) continue; // monsters, alive
+            // Monster modes 0 (death) and 12 (dead).
+            if (u[i] != 1 || (u[i + 1] >= 146 && u[i + 1] <= 179) || u[i + 5] == 0 || u[i + 5] == 12) continue;
             int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
             if (d < bestD) { bestD = d; best = i; }
         }
-        if (best >= 0 && bestD <= 8) return false; // arrived
+        distOut[0] = bestD;
+        return best;
+    }
+
+    /** Left skill (attack) on the nearest monster within reach subtiles. */
+    private boolean attackNearest(int reach) {
+        int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits(), d = new int[1];
+        int i = nearestMonster(u, s, d);
+        if (i < 0 || d[0] > reach) return false;
+        D2Native.serverAttack(u[i], u[i + 2]);
+        return true;
+    }
+
+    /** Developer helper: walks to the nearest monster and fights it. */
+    private boolean walkToNearestMonster() {
+        int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits();
+        int[] dist = new int[1];
+        int best = nearestMonster(u, s, dist), bestD = dist[0];
+        if (best >= 0 && bestD <= 4) { stuckCalls = 0; return attackNearest(4); }
+        // Not moving for a few calls (wall in the way of a straight-ish route): try the next point.
+        stuckCalls = s[0] == lastX && s[1] == lastY ? stuckCalls + 1 : 0;
+        lastX = s[0]; lastY = s[1];
+        if (stuckCalls >= 4) { stuckCalls = 0; exploreIndex++; best = -1; }
         if (best >= 0 && D2Native.devWalkToPoint(u[best + 3], u[best + 4], run)) return true;
         // None loaded, or none reachable from here (e.g. across the river): explore the hero's level, visiting points spread over it in turn; a point
         // that cannot be got closer to (river, cliff) is skipped.
@@ -175,7 +212,7 @@ public final class GameActivity extends Activity {
     }
 
     private static final float[][] EXPLORE = {{0.5f, 0.5f}, {0.2f, 0.2f}, {0.8f, 0.2f}, {0.8f, 0.8f}, {0.2f, 0.8f}};
-    private int exploreIndex;
+    private int exploreIndex, stuckCalls, lastX, lastY;
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
         Looks.Anim a = looks.get(D2Native.unitLook(type, guid), dir64);

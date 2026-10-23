@@ -363,6 +363,8 @@ static jintArray compositeAnimation(JNIEnv* env, const std::string& category, co
 
 #include "sgame.h"
 
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_setGameSeed(JNIEnv* env, jclass, jint seed) { EnvScope scope(env); sgame_set_seed(seed); }
+
 extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_startGame(JNIEnv* env, jclass, jint charClass, jint difficulty) {
 	EnvScope scope(env);
 	if (!gTablesLoaded || !sgame_create("Android", charClass, difficulty)) return 0;
@@ -372,6 +374,7 @@ extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_startGame(JNIEnv* 
 extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverTick(JNIEnv* env, jclass) { EnvScope scope(env); sgame_tick(); }
 extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_serverReady(JNIEnv* env, jclass) { EnvScope scope(env); return sgame_ready() ? JNI_TRUE : JNI_FALSE; }
 extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverMove(JNIEnv* env, jclass, jint x, jint y, jboolean run) { EnvScope scope(env); sgame_move(x, y, run); }
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_serverAttack(JNIEnv* env, jclass, jint type, jint guid) { EnvScope scope(env); sgame_attack(type, guid); }
 extern "C" JNIEXPORT jlong JNICALL Java_pl_d2port_d2_D2Native_serverAct(JNIEnv* env, jclass) { EnvScope scope(env); return (jlong)(intptr_t)sgame_act(); }
 
 extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverPlayer(JNIEnv* env, jclass) {
@@ -521,7 +524,9 @@ extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToLevel(
 	D2DrlgLevelStrc* pLevel = DRLG_GetLevel(pAct->pDrlg, level);
 	if (!pLevel) return JNI_FALSE;
 	int tx = (pLevel->nPosX + pLevel->nWidth / 2) * 5, ty = (pLevel->nPosY + pLevel->nHeight / 2) * 5;
-	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], tx, ty, 90, level);
+	// 250 subtiles covers the whole Rogue camp, so the goal level is found by search, not by the
+	// closest point to its centre (which can be a dead end along the palisade).
+	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], tx, ty, 250, level);
 	if (route.empty()) return JNI_FALSE;
 	const RoutePoint& p = route[std::min<size_t>(route.size() - 1, 12)];
 	sgame_move(p.x, p.y, run);
@@ -536,7 +541,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToPoint(
 	int s[9];
 	sgame_player_state(s);
 	if (std::abs(s[0] - x) + std::abs(s[1] - y) <= 4) return JNI_FALSE;
-	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], x, y, 90);
+	std::vector<RoutePoint> route = test_plan_route(pAct, s[0], s[1], x, y, 160);
 	if (route.empty()) return JNI_FALSE;
 	const RoutePoint& p = route[std::min<size_t>(route.size() - 1, 12)];
 	sgame_move(p.x, p.y, run);

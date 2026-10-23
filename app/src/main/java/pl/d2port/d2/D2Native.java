@@ -66,6 +66,8 @@ public final class D2Native {
 
     // ---- D2Game: the real game server (single player through an in-memory D2Net queue)
     /** New single-player game with a new character (charstats class); returns the act for map drawing, 0 on failure. */
+    /** Fixed game seed for the next startGame (-1 = random, as in normal play). */
+    public static native void setGameSeed(int seed);
     public static native long startGame(int charClass, int difficulty);
     /** Process client commands and run due server frames (call every 40 ms). */
     public static native void serverTick();
@@ -73,6 +75,8 @@ public final class D2Native {
     public static native boolean serverReady();
     /** Walk/run command to a subtile (client packet 0x01/0x03). */
     public static native void serverMove(int x, int y, boolean run);
+    /** Left skill (attack) on a unit, packet 0x06. */
+    public static native void serverAttack(int type, int guid);
     public static native long serverAct();
     /** Player state like playerState(). */
     public static native int[] serverPlayer();
