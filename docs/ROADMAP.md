@@ -19,7 +19,7 @@
 1. **Automap polish** — D2Client also reveals by line of sight and draws level names, exits and
    unit markers; our minimap reveals whole active rooms and shows only the hero.
 2. **Blood Moor** — reached on foot (seamless). D2Game spawns Fallen packs with correct stats; their
-   AI chases and hits the hero (verified in d2test, seed 777). Next: the hero hitting back.
+   AI chases and hits the hero (verified in d2test, seed 777) and are drawn in the app with their animations. Next: the hero hitting back.
 3. **Combat** — attack/skill packets (0x05-0x11), hit recovery, death, item drops on the ground
    (draw ground items: DC6 `data/global/items` flippy files).
 4. **HUD** — life/mana orbs, belt, skill buttons; read stats from the server unit.

@@ -8,6 +8,8 @@
 - Gradle 8.10 with Android Gradle Plugin 8.8 (no wrapper is committed yet; use a local Gradle or
   open the project in Android Studio).
 - `local.properties` with `sdk.dir=...` (not committed).
+- JDK 17+ for Gradle (AGP 8.8 refuses Java 8); Android Studio's bundled `jbr` works:
+  `JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"`.
 
 ```bash
 gradle assembleDebug

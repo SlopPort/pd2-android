@@ -159,13 +159,23 @@ public final class GameActivity extends Activity {
             int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
             if (d < bestD) { bestD = d; best = i; }
         }
-        if (best >= 0) return bestD > 8 && D2Native.devWalkToPoint(u[best + 3], u[best + 4], run);
-        // None loaded yet: explore towards the middle of the hero's level.
+        if (best >= 0 && bestD <= 8) return false; // arrived
+        if (best >= 0 && D2Native.devWalkToPoint(u[best + 3], u[best + 4], run)) return true;
+        // None loaded, or none reachable from here (e.g. across the river): explore the hero's level, visiting points spread over it in turn; a point
+        // that cannot be got closer to (river, cliff) is skipped.
         int[] li = D2Native.levelInfo(act, s[6]);
         if (li == null) return false;
-        int cx = (li[2] + li[4] / 2) * 5, cy = (li[3] + li[5] / 2) * 5;
-        return D2Native.devWalkToPoint(cx, cy, run);
+        for (int tries = 0; tries < EXPLORE.length; ++tries) {
+            float[] f = EXPLORE[exploreIndex % EXPLORE.length];
+            int tx = (int) ((li[2] + li[4] * f[0]) * 5), ty = (int) ((li[3] + li[5] * f[1]) * 5);
+            if (D2Native.devWalkToPoint(tx, ty, run)) return true;
+            exploreIndex++;
+        }
+        return false;
     }
+
+    private static final float[][] EXPLORE = {{0.5f, 0.5f}, {0.2f, 0.2f}, {0.8f, 0.2f}, {0.8f, 0.8f}, {0.2f, 0.8f}};
+    private int exploreIndex;
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
         Looks.Anim a = looks.get(D2Native.unitLook(type, guid), dir64);
