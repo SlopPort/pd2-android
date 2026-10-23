@@ -4,6 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 
+// End-of-list marker test. Storm marks a list end with the bitwise NOT of the terminator's
+// address and tested "pointer <= 0", which only holds while user memory is below 0x80000000
+// (32-bit Windows). Real nodes are aligned (even); the NOT of an aligned address is odd.
+inline bool SquallIsListEnd(const void* p) {
+    return p == nullptr || (reinterpret_cast<uintptr_t>(p) & 1) != 0;
+}
+
 template <class T>
 class TSLink {
     public:
@@ -34,14 +41,14 @@ bool TSLink<T>::IsLinked() {
 template <class T>
 T* TSLink<T>::Next() {
     // Check for sentinel node (indicates list end)
-    return reinterpret_cast<intptr_t>(this->m_next) <= 0 ? nullptr : this->m_next;
+    return SquallIsListEnd(this->m_next) ? nullptr : this->m_next;
 }
 
 template <class T>
 TSLink<T>* TSLink<T>::NextLink(ptrdiff_t linkoffset) {
     T* next = this->m_next;
 
-    if (reinterpret_cast<intptr_t>(next) <= 0) {
+    if (SquallIsListEnd(next)) {
         // End of list
         return reinterpret_cast<TSLink<T>*>(~reinterpret_cast<uintptr_t>(next));
     } else {

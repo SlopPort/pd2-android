@@ -75,7 +75,14 @@ uint32_t dword_6FD45848;
 int32_t dword_6FD2CA10 = 1;
 char gszEmptyString_6FD447EC[8];
 
+#ifdef __ANDROID__
+// D2Game.0x6FD447F8 is one array: SendGameInit stores game handles in it (hGameArray) and the frame
+// loop reads them as game GUIDs (the GUID is the handle value). D2MOO declared two separate arrays.
+static_assert(sizeof(HGAMEDATA) == sizeof(int32_t), "game handles are 32-bit");
+int32_t (&gnGamesGUIDs_6FD447F8)[1024] = reinterpret_cast<int32_t (&)[1024]>(hGameArray_6FD447F8);
+#else
 int32_t gnGamesGUIDs_6FD447F8[1024];
+#endif
 
 BOOL gbAllowTimeoutDisconnection_6FD2CA00 = TRUE;
 
@@ -130,10 +137,17 @@ void GAME_LogMessage(int32_t a1, const char* szFormat, ...)
     {
         gpD2EventCallbackTable_6FD45830->pfServerLogMessage(a1, "%s", szMessage);
     }
+#ifdef __ANDROID__
+    else
+    {
+        FOG_Trace("[%d] %s", a1, szMessage); // all server log levels go to logcat
+    }
+#else
     else if (a1 == 1)
     {
         FOG_Trace("%s", szMessage);
     }
+#endif
 }
 
 //D2Game.0x6FC357C0

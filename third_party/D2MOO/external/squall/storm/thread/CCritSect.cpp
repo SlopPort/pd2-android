@@ -6,7 +6,12 @@ CCritSect::CCritSect() {
 #endif
 
 #if defined(WHOA_SYSTEM_MAC) || defined(WHOA_SYSTEM_LINUX)
-    pthread_mutex_init(&this->m_critsect, nullptr);
+    // Re-entrant like a Win32 critical section: D2Game locks the same section again from the owning thread.
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&this->m_critsect, &attr);
+    pthread_mutexattr_destroy(&attr);
 #endif
 }
 

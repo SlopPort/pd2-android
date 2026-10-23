@@ -2288,7 +2288,15 @@ int32_t __fastcall D2GAME_SAVE_GetUnitDataFromFile_6FC8CB40(D2GameStrc* pGame, D
         if (a4)
         {
             D2UnitStrc* pPlayer = nullptr;
-            const int32_t nErrorCode = D2GAME_SAVE_ReadFile_6FC8C9D0(pGame, pClient, szName, &pPlayer, pRoomArg, nXArg, nYArg);
+            int32_t nErrorCode = D2GAME_SAVE_ReadFile_6FC8C9D0(pGame, pClient, szName, &pPlayer, pRoomArg, nXArg, nYArg);
+#ifdef __ANDROID__
+            // No save file yet: a new character, created from its class template like the other game types do.
+            if (!pPlayer && nErrorCode == SYSERROR_UNK_14)
+            {
+                pClient->tSaveFlags.bExpansion = pGame->bExpansion != 0; // a new character matches the game type
+                nErrorCode = sub_6FC8C890(pGame, pClient, &pPlayer, pRoomArg, nXArg, nYArg);
+            }
+#endif
             if (pPlayer)
             {
                 QUESTS_SequenceCycler(pGame, pPlayer, 0);

@@ -13,6 +13,9 @@
 #include <Path/PathMisc.h>
 #include <Units/Units.h>
 #include "game.h"
+#include "sgame.h"
+#include <unistd.h>
+#include <csignal>
 #include <cstdio>
 #include <vector>
 extern "C" void d2native_set_data_root(const char* root);
@@ -61,6 +64,32 @@ int main(int argc, char** argv) {
 	DATATBLS_LoadAllTxts(nullptr, 0, 0);
 	printf("tables loaded\n"); fflush(stdout);
 	if (argc > 3) { compareBins(root, argv[3]); return 0; }
+	if (getenv("D2SERVER")) {
+		// A hang becomes an abort with a stack in logcat.
+		signal(SIGALRM, [](int) { abort(); });
+		alarm(25);
+		// Full D2Game: new single-player game, the player walks, server frames run.
+		if (!sgame_create("Tester", 4, 0)) { printf("game not created\n"); return 1; }
+		int s[9];
+		sgame_player_state(s);
+		printf("player at %d,%d level %d mode %d\n", s[0], s[1], s[6], s[4]);
+		std::vector<int> units;
+		printf("units: %d\n", sgame_units(units));
+		for (size_t i = 0; i + 7 < units.size() && i < 8 * 40; i += 8)
+			printf("  type %d class %d at %d,%d mode %d\n", units[i], units[i + 1], units[i + 3], units[i + 4], units[i + 5]);
+		int waited = 0;
+		while (!sgame_ready() && waited < 100) { usleep(40000); sgame_tick(); ++waited; }
+		printf("in game after %d frames\n", waited);
+		sgame_move(s[0] + 15, s[1], false);
+		for (int f = 1; f <= 60; ++f) {
+			usleep(40000);
+			sgame_tick();
+			sgame_player_state(s);
+			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
+		}
+		printf("units after: %d\n", sgame_units(units));
+		return 0;
+	}
 	printf("lvlmaze %p count %d, lvlprest %p count %d\n", (void*)sgptDataTables->pLvlMazeTxt, sgptDataTables->nLvlMazeTxtRecordCount, (void*)sgptDataTables->pLvlPrestTxt, sgptDataTables->nLvlPrestTxtRecordCount);
 
 	for (int nLevel = 1; nLevel <= 39; ++nLevel) {

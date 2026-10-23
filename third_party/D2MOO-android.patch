@@ -154,7 +154,7 @@ index 91b696a..9def8f5 100644
  void __fastcall sub_6FD14C30(D2UnitStrc* pUnit);
  //D2Game.0x6FD14C60
 diff --git a/source/D2Game/src/GAME/Game.cpp b/source/D2Game/src/GAME/Game.cpp
-index 4bff91b..91a20c0 100644
+index 4bff91b..9d5b115 100644
 --- a/source/D2Game/src/GAME/Game.cpp
 +++ b/source/D2Game/src/GAME/Game.cpp
 @@ -47,8 +47,11 @@
@@ -169,7 +169,22 @@ index 4bff91b..91a20c0 100644
  
  D2GameStrc* gpGame_6FD457FC;
  int32_t gnAct_6FD45824;
-@@ -114,7 +117,11 @@ void* __fastcall sub_6FC35720()
+@@ -72,7 +75,14 @@ uint32_t dword_6FD45848;
+ int32_t dword_6FD2CA10 = 1;
+ char gszEmptyString_6FD447EC[8];
+ 
++#ifdef __ANDROID__
++// D2Game.0x6FD447F8 is one array: SendGameInit stores game handles in it (hGameArray) and the frame
++// loop reads them as game GUIDs (the GUID is the handle value). D2MOO declared two separate arrays.
++static_assert(sizeof(HGAMEDATA) == sizeof(int32_t), "game handles are 32-bit");
++int32_t (&gnGamesGUIDs_6FD447F8)[1024] = reinterpret_cast<int32_t (&)[1024]>(hGameArray_6FD447F8);
++#else
+ int32_t gnGamesGUIDs_6FD447F8[1024];
++#endif
+ 
+ BOOL gbAllowTimeoutDisconnection_6FD2CA00 = TRUE;
+ 
+@@ -114,7 +124,11 @@ void* __fastcall sub_6FC35720()
  void GAME_LogMessage(int32_t a1, const char* szFormat, ...)
  {
      char szMessage[4096] = {};
@@ -181,6 +196,24 @@ index 4bff91b..91a20c0 100644
  
      va_start(va, szFormat);
      vsprintf(szMessage, szFormat, va); // NOLINT(clang-diagnostic-deprecated-declarations)
+@@ -123,10 +137,17 @@ void GAME_LogMessage(int32_t a1, const char* szFormat, ...)
+     {
+         gpD2EventCallbackTable_6FD45830->pfServerLogMessage(a1, "%s", szMessage);
+     }
++#ifdef __ANDROID__
++    else
++    {
++        FOG_Trace("[%d] %s", a1, szMessage); // all server log levels go to logcat
++    }
++#else
+     else if (a1 == 1)
+     {
+         FOG_Trace("%s", szMessage);
+     }
++#endif
+ }
+ 
+ //D2Game.0x6FC357C0
 diff --git a/source/D2Game/src/PLAYER/PlayerList.cpp b/source/D2Game/src/PLAYER/PlayerList.cpp
 index f83fa57..a1a0599 100644
 --- a/source/D2Game/src/PLAYER/PlayerList.cpp
@@ -198,6 +231,27 @@ index f83fa57..a1a0599 100644
  
  
  //D2Game.0x6FCBA690
+diff --git a/source/D2Game/src/PLAYER/PlrSave.cpp b/source/D2Game/src/PLAYER/PlrSave.cpp
+index 2981358..0ce12dd 100644
+--- a/source/D2Game/src/PLAYER/PlrSave.cpp
++++ b/source/D2Game/src/PLAYER/PlrSave.cpp
+@@ -2288,7 +2288,15 @@ int32_t __fastcall D2GAME_SAVE_GetUnitDataFromFile_6FC8CB40(D2GameStrc* pGame, D
+         if (a4)
+         {
+             D2UnitStrc* pPlayer = nullptr;
+-            const int32_t nErrorCode = D2GAME_SAVE_ReadFile_6FC8C9D0(pGame, pClient, szName, &pPlayer, pRoomArg, nXArg, nYArg);
++            int32_t nErrorCode = D2GAME_SAVE_ReadFile_6FC8C9D0(pGame, pClient, szName, &pPlayer, pRoomArg, nXArg, nYArg);
++#ifdef __ANDROID__
++            // No save file yet: a new character, created from its class template like the other game types do.
++            if (!pPlayer && nErrorCode == SYSERROR_UNK_14)
++            {
++                pClient->tSaveFlags.bExpansion = pGame->bExpansion != 0; // a new character matches the game type
++                nErrorCode = sub_6FC8C890(pGame, pClient, &pPlayer, pRoomArg, nXArg, nYArg);
++            }
++#endif
+             if (pPlayer)
+             {
+                 QUESTS_SequenceCycler(pGame, pPlayer, 0);
 diff --git a/source/D2Game/src/SKILLS/Skills.cpp b/source/D2Game/src/SKILLS/Skills.cpp
 index 32755f1..c90d582 100644
 --- a/source/D2Game/src/SKILLS/Skills.cpp
@@ -214,6 +268,20 @@ index 32755f1..c90d582 100644
  {
      D2EffectStrc effect = {};
  
+diff --git a/source/D2Game/src/UNIT/Party.cpp b/source/D2Game/src/UNIT/Party.cpp
+index 1194066..9ab8278 100644
+--- a/source/D2Game/src/UNIT/Party.cpp
++++ b/source/D2Game/src/UNIT/Party.cpp
+@@ -19,7 +19,8 @@
+ void __fastcall PARTY_AllocPartyControl(D2GameStrc* pGame)
+ {
+     D2_ASSERT(pGame);
+-    D2_ASSERT(pGame->pPartyControl);
++    // D2MOO checked for an existing control here; the control is created by this function.
++    D2_ASSERT(!pGame->pPartyControl);
+ 
+     D2PartyControlStrc* pPartyControl = D2_ALLOC_STRC_POOL(pGame->pMemoryPool, D2PartyControlStrc);
+     D2_ASSERT(pPartyControl);
 diff --git a/source/Fog/include/Fog.h b/source/Fog/include/Fog.h
 index ad15c43..61e48ec 100644
 --- a/source/Fog/include/Fog.h

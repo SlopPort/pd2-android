@@ -247,7 +247,7 @@ T* TSHashTable<T, TKey>::Ptr(const char* str) {
         auto v9 = &this->m_slotlistarray[v8];
         v7 = v9->RawNext(v7);
 
-        if (reinterpret_cast<intptr_t>(v7) <= 0) {
+        if (SquallIsListEnd(v7)) {
             return nullptr;
         }
     }
@@ -277,7 +277,7 @@ T* TSHashTable<T, TKey>::Ptr(uint32_t hashval, const TKey& key) {
     while (ptr->m_hashval != hashval || !(ptr->m_key == key)) {
         ptr = slotlist->RawNext(ptr);
 
-        if (reinterpret_cast<intptr_t>(ptr) <= 0) {
+        if (SquallIsListEnd(ptr)) {
             return nullptr;
         }
     }

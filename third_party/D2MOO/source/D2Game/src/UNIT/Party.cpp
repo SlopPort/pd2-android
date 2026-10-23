@@ -19,7 +19,8 @@
 void __fastcall PARTY_AllocPartyControl(D2GameStrc* pGame)
 {
     D2_ASSERT(pGame);
-    D2_ASSERT(pGame->pPartyControl);
+    // D2MOO checked for an existing control here; the control is created by this function.
+    D2_ASSERT(!pGame->pPartyControl);
 
     D2PartyControlStrc* pPartyControl = D2_ALLOC_STRC_POOL(pGame->pMemoryPool, D2PartyControlStrc);
     D2_ASSERT(pPartyControl);

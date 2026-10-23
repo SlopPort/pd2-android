@@ -49,7 +49,8 @@ uint32_t __stdcall FOG_PopCount(void* pData, size_t dwSize) {
 	for (size_t i = 0; i < dwSize; ++i) n += __builtin_popcount(((uint8_t*)pData)[i]);
 	return n;
 }
-uint32_t __stdcall FOG_LeadingZeroesCount(uint32_t nValue) { return nValue ? __builtin_clz(nValue) : 32; }
+// Despite the name, callers use it as "index of the highest set bit, -1 for zero" (they clear that bit and loop while >= 0).
+uint32_t __stdcall FOG_LeadingZeroesCount(uint32_t nValue) { return nValue ? 31 - __builtin_clz(nValue) : (uint32_t)-1; }
 size_t __fastcall FOG_GetSavePath(char* pPathBuffer, size_t nBufferSize) {
 	extern const char* d2native_save_dir();
 	return SStrCopy(pPathBuffer, d2native_save_dir(), nBufferSize);
@@ -87,19 +88,13 @@ uint32_t CRC32_Compute(void* pData, size_t dwSize) {
 }
 size_t __cdecl FileLockAndRead(void* Buffer, size_t ElementSize, size_t ElementCount, FILE* Stream) { return fread(Buffer, ElementSize, ElementCount, Stream); }
 
-// ---------------------------------------------------------------- D2Net / server (no network)
+// ---------------------------------------------------------------- D2Net / server (no network; queues are in loopback.cpp)
 
 int32_t __stdcall SERVER_WSAGetLastError() { return 0; }
-int32_t __stdcall SERVER_SetClientGameGUID(int32_t, int32_t) { return 0; }
-int32_t __stdcall SERVER_ReadFromMessageList0(uint8_t*, int32_t) { return 0; }
-int32_t __stdcall SERVER_ReadFromMessageList1(uint8_t*, int32_t) { return 0; }
-int32_t __stdcall SERVER_ReadFromMessageList2(uint8_t*, int32_t) { return 0; }
 void __stdcall SERVER_GetIpAddressStringFromClientId(int32_t, char* szBuffer, int32_t nBufferSize) { SStrCopy(szBuffer, "127.0.0.1", (size_t)nBufferSize); }
-int32_t __stdcall SERVER_GetClientGameGUID(int32_t) { return 0; }
 int32_t __stdcall D2NET_10019(D2NET_Unk_Callback) { return 0; }
 void __stdcall D2NET_10016(int32_t) {}
 void __stdcall D2NET_10015(int32_t, const char*, int32_t) {}
-uint32_t __stdcall D2NET_10006(int8_t, int32_t, void*, uint32_t nBufferSize) { return nBufferSize; } // packet to client: dropped
 
 // ---------------------------------------------------------------- D2Game pieces tied to the Windows task queue
 
@@ -110,3 +105,13 @@ void __stdcall TASK_FreeAllQueueSlots() {}
 
 // squall's own declaration (storm/Memory.hpp) takes an unsigned size.
 void* SMemAlloc(uint32_t bytes, const char* filename, int32_t linenumber, uint32_t flags) { return SMemAlloc((int)bytes, filename, linenumber, flags); }
+
+// squall's STORM_ASSERT (storm/Error.hpp).
+static const char* gFatalFile; static int gFatalLine;
+int32_t __stdcall SErrPrepareAppFatal(const char* filename, int32_t linenumber) { gFatalFile = filename; gFatalLine = linenumber; return 0; }
+void SErrDisplayAppFatal(char* format, ...) {
+	char msg[1024];
+	va_list va; va_start(va, format); vsnprintf(msg, sizeof msg, format, va); va_end(va);
+	__android_log_print(ANDROID_LOG_FATAL, "D2Native", "FATAL %s (%s:%d)", msg, gFatalFile ? gFatalFile : "?", gFatalLine);
+	abort();
+}
