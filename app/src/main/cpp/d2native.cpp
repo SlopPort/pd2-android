@@ -396,6 +396,12 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_serverUnits(JN
 }
 
 // "CATEGORY|TOKEN|MODE|WCLASS|c0,c1,...,c15" or null.
+extern "C" JNIEXPORT jstring JNICALL Java_pl_d2port_d2_D2Native_groundItemFile(JNIEnv* env, jclass, jint guid) {
+	EnvScope scope(env);
+	std::string f = sgame_ground_item_file(guid);
+	return f.empty() ? nullptr : env->NewStringUTF(f.c_str());
+}
+
 extern "C" JNIEXPORT jstring JNICALL Java_pl_d2port_d2_D2Native_unitLook(JNIEnv* env, jclass, jint type, jint guid) {
 	EnvScope scope(env);
 	std::string category, token, mode, wclass, armor[16];

@@ -25,3 +25,7 @@ void sgame_set_seed(int nSeed);
 
 // Left skill on a unit (packet 0x06).
 void sgame_attack(int nType, int nGuid);
+
+// items.txt flippy DC6 of an item on the ground, "" otherwise.
+#include <string>
+std::string sgame_ground_item_file(int nGuid);

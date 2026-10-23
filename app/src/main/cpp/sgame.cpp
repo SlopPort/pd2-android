@@ -231,3 +231,18 @@ void sgame_attack(int nType, int nGuid) {
 	p.dwUnitType = (uint32_t)nType; p.dwUnitGUID = (uint32_t)nGuid;
 	loopback_send(1, kClientId, &p, sizeof p);
 }
+
+#include <DataTbls/ItemsTbls.h>
+
+// Ground graphics of an item lying on the floor: its items.txt flippy DC6 ("" when not on the ground).
+std::string sgame_ground_item_file(int nGuid) {
+	std::string file;
+	withGame([&](D2GameStrc* pGame) {
+		D2UnitStrc* u = SUNIT_GetServerUnit(pGame, UNIT_ITEM, nGuid);
+		if (!u || (u->dwAnimMode != IMODE_ONGROUND && u->dwAnimMode != IMODE_DROPPING)) return;
+		D2ItemsTxt* r = DATATBLS_GetItemsTxtRecord(u->dwClassId);
+		if (!r || !r->szFlippyFile[0]) return;
+		file = std::string("DATA\\GLOBAL\\ITEMS\\") + r->szFlippyFile + ".DC6";
+	});
+	return file;
+}

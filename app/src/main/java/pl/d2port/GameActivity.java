@@ -148,7 +148,12 @@ public final class GameActivity extends Activity {
             if (hero != null) list.add(hero);
             int[] u = D2Native.serverUnits();
             for (int i = 0; i + 7 < u.length; i += 8) {
-                if (u[i] == 4) continue; // items lie in inventories here; ground items come later
+                if (u[i] == 4) { // items: only those lying on the ground, drawn with the last flippy frame
+                    if (Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]) > 60) continue;
+                    LevelView.Sprite g = groundItem(u[i + 2], u[i + 3] + 0.5f, u[i + 4] + 0.5f);
+                    if (g != null) list.add(g);
+                    continue;
+                }
                 // Only units near the hero (a screen and a half).
                 if (Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]) > 60) continue;
                 LevelView.Sprite sp = sprite(u[i], u[i + 2], u[i + 3] + 0.5f, u[i + 4] + 0.5f, u[i + 6], u[i + 7]);
@@ -220,6 +225,27 @@ public final class GameActivity extends Activity {
     private int exploreIndex, stuckCalls, lastX, lastY;
     /** Monsters the dev helper got stuck walking to (walls between); skipped from then on. */
     private final java.util.Set<Integer> unreachable = new java.util.HashSet<>();
+
+    private final java.util.Map<String, Object[]> flippies = new java.util.HashMap<>();
+
+    /** Native thread: an item on the ground as D2 shows it once it has landed (last flippy frame). */
+    private LevelView.Sprite groundItem(int guid, float x, float y) {
+        String file = D2Native.groundItemFile(guid);
+        if (file == null) return null;
+        Object[] f = flippies.get(file);
+        if (f == null) {
+            int[] d = D2Native.dc6Frames(file);
+            f = new Object[]{null, 0, 0};
+            if (d != null && d[0] > 0) {
+                int n = d[0], p = 1;
+                for (int i = 0; i < n - 1; i++) p += 4 + d[p] * d[p + 1];
+                int w = d[p], h = d[p + 1];
+                if (w > 0 && h > 0) f = new Object[]{android.graphics.Bitmap.createBitmap(d, p + 4, w, w, h, android.graphics.Bitmap.Config.ARGB_8888), d[p + 2] - w / 2, d[p + 3] - h};
+            }
+            flippies.put(file, f);
+        }
+        return f[0] == null ? null : new LevelView.Sprite(x, y, (android.graphics.Bitmap) f[0], (int) f[1], (int) f[2]);
+    }
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {
         Looks.Anim a = looks.get(D2Native.unitLook(type, guid), dir64);

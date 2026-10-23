@@ -84,6 +84,8 @@ public final class D2Native {
     public static native int[] serverUnits();
     /** Graphics key of a unit (type 0 + guid 0 = the player). */
     public static native String unitLook(int type, int guid);
+    /** items.txt flippy DC6 path of an item lying on the ground, or null. */
+    public static native String groundItemFile(int guid);
     /** Animation for a graphics key, same layout as unitAnimation. */
     public static native int[] lookAnimation(String key, int direction);
     /** Tiles of all rooms the game keeps active (any level), layout as levelTiles. */
