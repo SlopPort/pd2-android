@@ -24,3 +24,10 @@ struct Cof {
 };
 
 bool cof_parse(const uint8_t* data, size_t size, Cof& out);
+
+// DC6 (UI, item and automap graphics): every frame of every direction, palette indices (0 = transparent).
+struct Dc6Frame {
+	int width = 0, height = 0, offsetX = 0, offsetY = 0; // offsets: frame's bottom-left relative to its anchor
+	std::vector<uint8_t> pixels;                          // rows top to bottom
+};
+bool dc6_decode(const uint8_t* data, size_t size, std::vector<Dc6Frame>& out);

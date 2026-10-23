@@ -84,4 +84,8 @@ public final class D2Native {
     public static native int[] lookAnimation(String key, int direction);
     /** Tiles of all rooms the game keeps active (any level), layout as levelTiles. */
     public static native int[] activeTiles(long act);
+    /** Automap of revealed rooms: {tileX, tileY, cell} per tile (cell = frame of the automap DC6). */
+    public static native int[] automapCells(long act);
+    /** All frames of a DC6 file (game path): {count, then per frame width, height, offX, offY, argb...}. */
+    public static native int[] dc6Frames(String path);
 }

@@ -38,6 +38,9 @@ class LevelView extends View {
     }
     /** Units of the current frame, hero included; replaced whole by the game thread. */
     volatile Sprite[] sprites = new Sprite[0];
+    /** Minimap in the top-right corner (null: none). */
+    volatile Automap automap;
+    private final android.graphics.RectF mapArea = new android.graphics.RectF();
     private final Paint paint = new Paint(), red = new Paint();
 
     LevelView(Context c) {
@@ -111,6 +114,12 @@ class LevelView extends View {
                 }
         }
         c.restore();
+        Automap am = automap;
+        if (am != null && !Float.isNaN(hx)) {
+            float w = getWidth() * 0.28f, h = getHeight() * 0.38f;
+            mapArea.set(getWidth() - w - 16, 16, getWidth() - 16, 16 + h);
+            am.draw(c, hx, hy, mapArea);
+        }
     }
 
     private void drawSprite(Canvas c, Sprite s) {

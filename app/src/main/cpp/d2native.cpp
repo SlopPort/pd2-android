@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <D2BasicTypes.h>
 #include <D2DataTbls.h>
+#include <DataTbls/LevelsTbls.h>
 #include <D2Dungeon.h>
 #include <Drlg/D2DrlgDrlg.h>
 #include <jni.h>
@@ -434,6 +435,68 @@ extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_activeTiles(JN
 					v.push_back(t[i].pTile->nType); v.push_back(tileKey(t[i].pTile)); v.push_back((jint)t[i].dwFlags);
 				}
 			}
+		}
+	}
+	jintArray out = env->NewIntArray((jsize)v.size());
+	env->SetIntArrayRegion(out, 0, (jsize)v.size(), v.data());
+	return out;
+}
+
+// ------------------------------------------------------------------ automap
+
+
+namespace {
+// Automap cells of rooms the player has been near (D2 reveals the automap the same way), kept after
+// the game unloads the room: {tileX, tileY, cellId} per tile.
+std::map<D2DrlgRoomStrc*, std::vector<jint>> gRevealed;
+}
+
+// Automap of revealed rooms: {tileX, tileY, cellId} per tile; the cell is the frame in
+// data/global/ui/automap/maximap.dc6, chosen by D2Common from automap.txt (level type, tile type,
+// style, sequence) as D2Client does.
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_automapCells(JNIEnv* env, jclass, jlong act) {
+	EnvScope scope(env);
+	D2DrlgActStrc* pAct = (D2DrlgActStrc*)(intptr_t)act;
+	if (!pAct || !pAct->pDrlg) return nullptr;
+	for (D2DrlgLevelStrc* pLevel = pAct->pDrlg->pLevel; pLevel; pLevel = pLevel->pNextLevel) {
+		for (D2DrlgRoomStrc* r = pLevel->pFirstRoomEx; r; r = r->pDrlgRoomNext) {
+			if (!r->pRoom || gRevealed.count(r)) continue;
+			std::vector<jint>& cells = gRevealed[r];
+			for (int layer = 0; layer < 2; ++layer) {
+				int n = 0;
+				D2DrlgTileDataStrc* t = layer == 0 ? DUNGEON_GetFloorTilesFromRoom(r->pRoom, &n) : DUNGEON_GetWallTilesFromRoom(r->pRoom, &n);
+				for (int i = 0; i < n; ++i) {
+					D2TileLibraryEntryStrc* e = t[i].pTile;
+					if (!e || (t[i].dwFlags & MAPTILE_HIDDEN)) continue;
+					int cell = DATATBLS_GetAutomapCellId(pLevel->nLevelType, e->nType, e->nStyle, e->nSequence);
+					if (cell < 0) continue;
+					cells.push_back(t[i].nPosX + r->nTileXPos); cells.push_back(t[i].nPosY + r->nTileYPos); cells.push_back(cell);
+				}
+			}
+		}
+	}
+	std::vector<jint> v;
+	for (auto& kv : gRevealed) v.insert(v.end(), kv.second.begin(), kv.second.end());
+	jintArray out = env->NewIntArray((jsize)v.size());
+	env->SetIntArrayRegion(out, 0, (jsize)v.size(), v.data());
+	return out;
+}
+
+// All frames of a DC6 file in the act palette: {count, then per frame w, h, offX, offY, argb...}.
+extern "C" JNIEXPORT jintArray JNICALL Java_pl_d2port_d2_D2Native_dc6Frames(JNIEnv* env, jclass, jstring jpath) {
+	EnvScope scope(env);
+	const char* p = env->GetStringUTFChars(jpath, nullptr); std::string path = p; env->ReleaseStringUTFChars(jpath, p);
+	const std::vector<uint8_t>* data = gameFile(path);
+	std::vector<Dc6Frame> frames;
+	if (!data || !dc6_decode(data->data(), data->size(), frames)) return nullptr;
+	std::vector<jint> v;
+	v.push_back((jint)frames.size());
+	for (const Dc6Frame& f : frames) {
+		v.push_back(f.width); v.push_back(f.height); v.push_back(f.offsetX); v.push_back(f.offsetY);
+		for (uint8_t c : f.pixels) {
+			if (!c) { v.push_back(0); continue; }
+			const uint8_t* rgb = gPalette + c * 3;
+			v.push_back((jint)(0xFFu << 24 | rgb[2] << 16 | rgb[1] << 8 | rgb[0]));
 		}
 	}
 	jintArray out = env->NewIntArray((jsize)v.size());

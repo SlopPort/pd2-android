@@ -40,6 +40,7 @@ public final class GameActivity extends Activity {
     private final java.util.Map<Integer, android.graphics.Bitmap> tileImages = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
     private final java.util.Map<Integer, int[]> tileOffsets = java.util.Collections.synchronizedMap(new java.util.HashMap<>());
     private int worldSignature;
+    private final Automap automap = new Automap();
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -71,6 +72,8 @@ public final class GameActivity extends Activity {
             // A new single-player game run by D2Game, as the original client created one.
             act = D2Native.startGame(4, 0);
             if (act == 0) throw new java.io.IOException("D2Game nie utworzył gry (logcat D2Native)");
+            automap.load();
+            view.automap = automap;
             nativeThread.scheduleAtFixedRate(this::gameFrame, FRAME_MS, FRAME_MS, TimeUnit.MILLISECONDS);
         } catch (Exception ex) {
             runOnUiThread(() -> status.setText("Błąd: " + ex.getMessage()));
@@ -131,6 +134,7 @@ public final class GameActivity extends Activity {
             view.heroX = hx; view.heroY = hy;
             view.postInvalidateOnAnimation();
             if (frame % 10 == 0) refreshWorld();
+            if (frame % 25 == 5) automap.update(act);
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }

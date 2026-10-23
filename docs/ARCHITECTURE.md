@@ -56,6 +56,10 @@ size differs from the 1.10 struct (PD2's `itemstatcost`), the `.txt` is compiled
    `D2Common_11069` for monster components), and the tiles of every room the game keeps active —
    rooms of the next level appear as the hero approaches, so level changes are seamless.
 
+The automap (`Automap.java`) takes cells from `automapCells`: for tiles of rooms that were ever
+active, D2Common's `DATATBLS_GetAutomapCellId` picks the frame of `data/global/ui/automap/maximap.dc6`
+(1/5 of the world scale: a 160x80 tile is a 32x16 cell).
+
 Packets from server to client are collected (`loopback_next_packet`) but not used yet; a future
 client side (sounds, overhead messages, item updates) can read them.
 

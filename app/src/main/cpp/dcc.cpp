@@ -229,3 +229,37 @@ bool cof_parse(const uint8_t* d, size_t size, Cof& out) {
 	out.priority.assign(d + p, d + p + n);
 	return true;
 }
+
+// DC6: 24-byte header (version 6), frame pointer table, then per frame a 32-byte header
+// (flip, width, height, offsetX, offsetY, unknown, next block, length) and run-length data:
+// 0x80 ends a row, a byte with the top bit set skips (byte & 0x7F) transparent pixels, any other
+// byte n copies the next n pixels. Rows are stored bottom-up unless the flip flag is set.
+bool dc6_decode(const uint8_t* d, size_t size, std::vector<Dc6Frame>& out) {
+	out.clear();
+	if (size < 24) return false;
+	auto u32 = [&](size_t o) { uint32_t v; memcpy(&v, d + o, 4); return v; };
+	if (u32(0) != 6) return false;
+	uint32_t dirs = u32(16), frames = u32(20);
+	if (dirs * frames > 4096 || 24 + 4ull * dirs * frames > size) return false;
+	for (uint32_t i = 0; i < dirs * frames; ++i) {
+		uint32_t p = u32(24 + 4 * i);
+		if (p + 32 > size) return false;
+		Dc6Frame f;
+		uint32_t flip = u32(p);
+		f.width = (int)u32(p + 4); f.height = (int)u32(p + 8);
+		f.offsetX = (int32_t)u32(p + 12); f.offsetY = (int32_t)u32(p + 16);
+		uint32_t length = u32(p + 28);
+		if (f.width < 0 || f.height < 0 || f.width > 4096 || f.height > 4096 || p + 32 + length > size) return false;
+		f.pixels.assign((size_t)f.width * f.height, 0);
+		const uint8_t* s = d + p + 32; const uint8_t* end = s + length;
+		int x = 0, y = flip ? 0 : f.height - 1;
+		while (s < end && y >= 0 && y < f.height) {
+			uint8_t b = *s++;
+			if (b == 0x80) { x = 0; y += flip ? 1 : -1; }
+			else if (b & 0x80) x += b & 0x7F;
+			else for (int k = 0; k < b && s < end; ++k, ++x) if (x < f.width) f.pixels[(size_t)y * f.width + x] = *s++; else ++s;
+		}
+		out.push_back(std::move(f));
+	}
+	return true;
+}
