@@ -6,7 +6,7 @@ import pl.d2port.data.GameData;
 
 /**
  * Native D2 core: D2MOO's D2Common (original Diablo II 1.10 game code) compiled for Android,
- * with the PD2 tables. Game files are read through {@link GameData} from the user's MPQs.
+ * with the game tables. Game files are read through {@link GameData} from the user's MPQs.
  * One act at a time; all calls must come from the same worker thread.
  */
 public final class D2Native {

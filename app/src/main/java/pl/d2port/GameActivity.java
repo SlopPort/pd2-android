@@ -22,7 +22,7 @@ import pl.d2port.data.InstallationStore;
 
 /**
  * The game: one native thread runs D2's 25 frames per second; the screen draws the latest state.
- * Movement uses PD2's gamepad scheme (see Stick): the stick picks a point in its direction and a
+ * Movement uses a gamepad-style scheme (see Stick): the stick picks a point in its direction and a
  * walk/run command to it is repeated every 5 frames; walk or run comes from the run toggle only.
  */
 public final class GameActivity extends Activity {
@@ -75,7 +75,7 @@ public final class GameActivity extends Activity {
         invButton.setOnClickListener(v -> { inventoryOpen = !inventoryOpen; inventory.setVisibility(inventoryOpen ? View.VISIBLE : View.GONE); });
         bar.addView(runButton); bar.addView(walk); bar.addView(hunt); bar.addView(invButton); bar.addView(status);
         root.addView(bar);
-        // Attack, PD2 controller style: held, it keeps hitting the nearest monster in reach.
+        // Attack, gamepad style: held, it keeps hitting the nearest monster in reach.
         Button attack = new Button(this); attack.setAllCaps(false); attack.setText("Atak");
         attack.setOnTouchListener((v, e) -> {
             int a = e.getActionMasked();
@@ -333,7 +333,7 @@ public final class GameActivity extends Activity {
     }
 
     /**
-     * Virtual stick, PD2 style: square dead zone per axis (0.3 of the radius, PD2's value for
+     * Virtual stick: square dead zone per axis (0.3 of the radius, as a gamepad dead zone of
      * controller_deadzone 20), outside it only the direction and tilt are passed on.
      */
     static final class Stick extends View {

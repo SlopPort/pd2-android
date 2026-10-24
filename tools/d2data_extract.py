@@ -1,7 +1,9 @@
-r"""Extract D2/PD2 game files for the native engine (lower-case paths, '/' separators).
+r"""Extract Diablo II game files for the native engine (lower-case paths, '/' separators).
 
-Archives are searched in PD2 load order: PD2 archives first, then the Diablo II ones.
-Usage: python tools/d2data_extract.py OUT_DIR name [name ...]   (names like DATA\GLOBAL\AnimData.d2)
+Archives are searched in the game's load order (patch_d2, d2exp, d2data, d2char) of the Diablo II
+installation two folders up. With --pd2 the Project Diablo 2 archives (a mod) are searched first.
+Usage: python tools/d2data_extract.py [--pd2] OUT_DIR name [name ...]   (names like DATA\GLOBAL\AnimData.d2)
+       python tools/d2data_extract.py [--pd2] OUT_DIR @list.txt          (one name per line)
 """
 import sys
 from pathlib import Path
@@ -10,12 +12,17 @@ from assets_mpq import MPQ
 
 GAME = Path(__file__).resolve().parents[3]  # D:/gry/Diablo II
 PD2 = GAME / 'ProjectD2'
-ORDER = [PD2/'pd2maps.mpq', PD2/'pd2data.mpq', PD2/'pd2monchars.mpq', PD2/'pd2assets.mpq', PD2/'patch_d2.mpq',
-         GAME/'patch_d2.mpq', GAME/'d2exp.mpq', GAME/'d2data.mpq', GAME/'d2char.mpq']
+VANILLA = [GAME/'patch_d2.mpq', GAME/'d2exp.mpq', GAME/'d2data.mpq', GAME/'d2char.mpq']
+PD2_MOD = [PD2/'pd2maps.mpq', PD2/'pd2data.mpq', PD2/'pd2monchars.mpq', PD2/'pd2assets.mpq', PD2/'patch_d2.mpq']
 
 def main():
-    out = Path(sys.argv[1]); names = sys.argv[2:]
-    archives = [MPQ(p) for p in ORDER if p.exists()]
+    args = sys.argv[1:]
+    order = VANILLA
+    if args and args[0] == '--pd2': order = PD2_MOD + VANILLA; args = args[1:]
+    out = Path(args[0]); names = args[1:]
+    if len(names) == 1 and names[0].startswith('@'):
+        names = [l.strip() for l in Path(names[0][1:]).read_text().splitlines() if l.strip()]
+    archives = [MPQ(p) for p in order if p.exists()]
     missing = 0
     for name in names:
         key = name.replace('/', '\\')

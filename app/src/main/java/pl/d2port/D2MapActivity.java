@@ -43,7 +43,7 @@ public final class D2MapActivity extends Activity {
         root.setBackgroundColor(Color.BLACK);
         root.setFitsSystemWindows(true); // keep the buttons out from under the status bar
         setContentView(root);
-        status.setText("Wczytywanie tabel PD2…");
+        status.setText("Wczytywanie tabel…");
         worker.execute(() -> {
             try {
                 InstallationStore store = new InstallationStore(new File(getFilesDir(), "installation"));
