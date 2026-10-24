@@ -75,7 +75,7 @@ SSW WSW WNW NNW NNE ENE ESE SSE (16). See `Looks.cofDirection`.
 `sgame_units` gives 13 ints per unit: type, class, guid, x, y, mode, direction, server frame, precise
 x, y (16.16), new direction, wAnimSpeed, dwFrameCountPrecise (8.8). Units are drawn at the precise
 position (the integer one makes walkers jump subtile by subtile). The server does not step monster
-walk/idle frames (D2Client does that on its own units), so the app advances a frame per monster
+walk/idle frames (D2Client does that on its own units), so the app advances a frame per monster and object (torches, fires)
 guid by wAnimSpeed each game frame and wraps at dwFrameCountPrecise, as D2Common #10373 does; the
 facing is the path's nNewDirection. pDynamicPath and pStaticPath are one union: only players,
 monsters and missiles are read through the dynamic path.

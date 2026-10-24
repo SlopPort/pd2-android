@@ -93,6 +93,9 @@ int main(int argc, char** argv) {
 			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
 		}
 		if (getenv("D2NPC")) {
+			sgame_units(units);
+			for (size_t i = 0; i + 12 < units.size(); i += 13)
+				if (units[i] == 2) printf("object class %d mode %d frame %d speed %d count %d\n", units[i + 1], units[i + 5], units[i + 7], units[i + 11], units[i + 12]);
 			// Town NPCs (monstats 146-179): mode, animation frame and precise position over time.
 			for (int f = 0; f < 150; ++f) {
 				usleep(40000);
