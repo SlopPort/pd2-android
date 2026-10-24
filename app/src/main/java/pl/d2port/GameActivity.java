@@ -198,7 +198,7 @@ public final class GameActivity extends Activity {
             if (frame % 10 == 0) refreshWorld();
             if (frame % 25 == 5) automap.update(act);
             if (frame % 5 == 0) view.vitals = D2Native.serverVitals();
-            if (inventoryOpen && frame % 10 == 0) inventory.update();
+            if (inventoryOpen) { inventory.handleTap(); if (frame % 5 == 0) inventory.update(); }
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }

@@ -23,10 +23,10 @@ the same 25 game frames per second, the same animations — not a remake.
   (0x41).
 - **Graphics:** DT1 tiles, COF/DCC units and DC6 images are decoded by our own code and drawn in
   depth order, with client-side walk/idle animation of monsters and objects.
-- **UI:** automap minimap, life/mana globes, items on the ground, an inventory panel (view only),
+- **UI:** automap minimap, life/mana globes, items on the ground, an inventory panel where items can be moved, equipped and dropped,
   a virtual stick modelled on PD2's gamepad scheme. The app's buttons are labelled in Polish.
 
-Not done yet: moving items, belt and skill bar, NPC interaction, quests, sound, saving, Acts II-V.
+Not done yet: belt and skill bar, NPC interaction, quests, sound, saving, Acts II-V.
 See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation

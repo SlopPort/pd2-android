@@ -72,11 +72,14 @@ final class InventoryView extends View {
             c.drawBitmap(p[7], left + p[4].getWidth(), top + p[4].getHeight(), paint);
         }
         int gridLeft = l[6], gridTop = l[8], boxW = l[10], boxH = l[11];
+        Bitmap cursor = null;
         for (int i = 0; i < items.length; i++) {
             Bitmap b = items[i];
             if (b == null) continue;
-            int page = d[i * 6], body = d[i * 6 + 1], x = d[i * 6 + 2], y = d[i * 6 + 3];
-            if (page == 0) { // inventory grid
+            int page = d[i * N], body = d[i * N + 1], x = d[i * N + 2], y = d[i * N + 3], mode = d[i * N + 7];
+            if (mode == IMODE_ONCURSOR) {
+                cursor = b;
+            } else if (page == 0) { // inventory grid
                 c.drawBitmap(b, gridLeft + x * boxW, gridTop + y * boxH, paint);
             } else if (page == 255 && body > 0 && body < COMPONENT_OF_BODYLOC.length) {
                 int k = 12 + COMPONENT_OF_BODYLOC[body] * 6;
@@ -84,6 +87,88 @@ final class InventoryView extends View {
                 c.drawBitmap(b, cx - b.getWidth() / 2f, cy - b.getHeight() / 2f, paint);
             }
         }
+        // The item on the cursor follows the last touch, centred as D2Client draws it.
+        if (cursor != null && !Float.isNaN(touchX)) c.drawBitmap(cursor, touchX - cursor.getWidth() / 2f, touchY - cursor.getHeight() / 2f, paint);
         c.restore();
+    }
+
+    private static final int N = 8, IMODE_ONCURSOR = 4;
+    /** Last touch in 800x600 coordinates. */
+    private float touchX = Float.NaN, touchY = Float.NaN;
+    /** A tap waiting for the native thread: {x, y} in 800x600, or null. */
+    private volatile float[] pendingTap;
+
+    @Override public boolean onTouchEvent(android.view.MotionEvent e) {
+        Object[] s = state;
+        if (s == null) return false;
+        float scale = getHeight() / 600f;
+        float x = (e.getX() - (getWidth() - 800 * scale) / 2f) / scale, y = e.getY() / scale;
+        int[] l = (int[]) s[0];
+        boolean inPanel = x >= l[0] && x < l[0] + 320 && y >= l[2] && y < l[2] + 502;
+        boolean holding = hasCursorItem(s);
+        if (!inPanel && !holding) return false; // the world and the stick get it
+        touchX = x; touchY = y;
+        if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP) pendingTap = new float[]{x, y};
+        invalidate();
+        return true;
+    }
+
+    private static boolean hasCursorItem(Object[] s) {
+        int[] d = (int[]) s[2];
+        for (int i = 0; i + N - 1 < d.length; i += N) if (d[i + 7] == IMODE_ONCURSOR) return true;
+        return false;
+    }
+
+    /**
+     * Native thread: turns a pending tap into the packet the 1.10 client sends for that click. With
+     * nothing on the cursor a tap takes the item under it (grid 0x19, body 0x1C); with an item on
+     * the cursor it places it in the grid (0x18, top-left cell under the item's centre), equips or
+     * swaps it on a body box (0x1A / 0x1D), or drops it outside the panel (0x17).
+     */
+    void handleTap() {
+        float[] t = pendingTap;
+        Object[] s = state;
+        if (t == null || s == null) return;
+        pendingTap = null;
+        int[] l = (int[]) s[0], d = (int[]) s[2];
+        int gridLeft = l[6], gridTop = l[8], boxW = l[10], boxH = l[11], cols = l[4], rows = l[5];
+        int cursor = -1;
+        for (int i = 0; i + N - 1 < d.length; i += N) if (d[i + 7] == IMODE_ONCURSOR) cursor = i;
+        int body = bodyLocAt(l, t[0], t[1]);
+        if (cursor < 0) {
+            for (int i = 0; i + N - 1 < d.length; i += N) {
+                int page = d[i], loc = d[i + 1], x = d[i + 2], y = d[i + 3], w = d[i + 4], h = d[i + 5];
+                if (page == 0 && t[0] >= gridLeft + x * boxW && t[0] < gridLeft + (x + w) * boxW
+                        && t[1] >= gridTop + y * boxH && t[1] < gridTop + (y + h) * boxH) {
+                    D2Native.itemCommand(0x19, d[i + 6], 0, 0, 0);
+                    return;
+                }
+                if (page == 255 && loc > 0 && loc == body) { D2Native.itemCommand(0x1C, 0, loc, 0, 0); return; }
+            }
+            return;
+        }
+        int guid = d[cursor + 6], w = d[cursor + 4], h = d[cursor + 5];
+        if (body > 0) {
+            boolean occupied = false;
+            for (int i = 0; i + N - 1 < d.length; i += N) occupied |= d[i] == 255 && d[i + 1] == body && d[i + 7] != IMODE_ONCURSOR;
+            D2Native.itemCommand(occupied ? 0x1D : 0x1A, guid, body, 0, 0);
+            return;
+        }
+        int gx = Math.round((t[0] - gridLeft) / boxW - w / 2f), gy = Math.round((t[1] - gridTop) / boxH - h / 2f);
+        if (t[0] >= gridLeft && t[0] < gridLeft + cols * boxW && t[1] >= gridTop && t[1] < gridTop + rows * boxH) {
+            gx = Math.max(0, Math.min(cols - w, gx)); gy = Math.max(0, Math.min(rows - h, gy));
+            D2Native.itemCommand(0x18, guid, gx, gy, 0);
+            return;
+        }
+        if (t[0] < l[0] || t[0] >= l[0] + 320) D2Native.itemCommand(0x17, guid, 0, 0, 0);
+    }
+
+    /** Body location whose inventory.txt box contains the point, or 0. */
+    private static int bodyLocAt(int[] l, float x, float y) {
+        for (int loc = 1; loc < COMPONENT_OF_BODYLOC.length; loc++) {
+            int k = 12 + COMPONENT_OF_BODYLOC[loc] * 6;
+            if (x >= l[k] && x < l[k + 1] && y >= l[k + 2] && y < l[k + 3]) return loc;
+        }
+        return 0;
     }
 }

@@ -567,7 +567,7 @@ extern "C" JNIEXPORT jboolean JNICALL Java_pl_d2port_d2_D2Native_devWalkToPoint(
 
 // ------------------------------------------------------------------ inventory panel
 
-// {int[72] layout, String[] item graphics, int[] per item {page, body location, x, y, w, h}}.
+// {int[72] layout, String[] item graphics, int[] per item {page, body location, x, y, w, h, guid, mode}}.
 extern "C" JNIEXPORT jobjectArray JNICALL Java_pl_d2port_d2_D2Native_inventory(JNIEnv* env, jclass) {
 	EnvScope scope(env);
 	jint layout[72];
@@ -582,7 +582,7 @@ extern "C" JNIEXPORT jobjectArray JNICALL Java_pl_d2port_d2_D2Native_inventory(J
 	std::vector<jint> data;
 	for (size_t i = 0; i < items.size(); ++i) {
 		env->SetObjectArrayElement(files, (jsize)i, env->NewStringUTF(items[i].file.c_str()));
-		data.insert(data.end(), {items[i].page, items[i].bodyLoc, items[i].x, items[i].y, items[i].w, items[i].h});
+		data.insert(data.end(), {items[i].page, items[i].bodyLoc, items[i].x, items[i].y, items[i].w, items[i].h, items[i].guid, items[i].mode});
 	}
 	env->SetObjectArrayElement(out, 1, files);
 	jintArray d = env->NewIntArray((jsize)data.size());
@@ -590,3 +590,5 @@ extern "C" JNIEXPORT jobjectArray JNICALL Java_pl_d2port_d2_D2Native_inventory(J
 	env->SetObjectArrayElement(out, 2, d);
 	return out;
 }
+
+extern "C" JNIEXPORT void JNICALL Java_pl_d2port_d2_D2Native_itemCommand(JNIEnv* env, jclass, jint cmd, jint guid, jint a, jint b, jint c) { EnvScope scope(env); sgame_item_command(cmd, guid, a, b, c); }
