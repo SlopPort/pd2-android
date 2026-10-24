@@ -4,11 +4,10 @@
 
 - Android SDK (compileSdk 35) with NDK **27.2.12479018** and CMake **3.22.1**
   (`sdkmanager "ndk;27.2.12479018" "cmake;3.22.1"`).
-- JDK 17+ (Android Studio's bundled JBR works).
 - Gradle 8.10 with Android Gradle Plugin 8.8 (no wrapper is committed yet; use a local Gradle or
   open the project in Android Studio).
 - `local.properties` with `sdk.dir=...` (not committed).
-- JDK 17+ for Gradle (AGP 8.8 refuses Java 8); Android Studio's bundled `jbr` works:
+- JDK 17+ (AGP 8.8 refuses Java 8); Android Studio's bundled `jbr` works:
   `JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"`.
 
 ```bash

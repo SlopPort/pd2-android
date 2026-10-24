@@ -19,7 +19,8 @@
 | `D2MOVE=1` | player movement through D2Common paths only (no server) |
 | `D2LEVEL=n` | writes `collision.pgm` and `tiles.ppm` of level n to `/data/local/tmp` |
 | `D2DIRS=1` | prints D2 directions for 8 vectors |
-| `D2EXIT=1` (with `D2SERVER`) | walks the hero from the camp into Blood Moor with the route helper (`route.cpp`: BFS over D2 collision of loaded rooms), then to the nearest monster; prints monster/hero combat stats and hero life. Reference seed **777** (the 2nd argument; the test fixes the game seed with `GAME_SetInitSeed`): Fallen pack, hero life 55 → 51. Some seeds (e.g. 1234) never reach the gate: the 90-subtile planning radius is too small for that camp layout |
+| `D2EXIT=1` (with `D2SERVER`) | walks the hero from the camp into Blood Moor with the route helper (`route.cpp`: BFS over D2 collision of loaded rooms), hunts the nearest monsters and prints combat stats and hero life; after frame 1300 it picks up nearby loot and prints gold and inventory item count. See "Reference seed" below |
+| `D2DEATH=1` (with `D2EXIT`) | sets hero life to 1 at the first attack, waits for `PLRMODE_DEAD`, sends packet 0x41 and checks the hero is back in camp with full life |
 | `D2TXT=1` | compile tables from `.txt` instead of PD2's `.bin` |
 | 3rd argument | directory with reference `.bin` files: compares our compiled tables |
 
@@ -61,18 +62,32 @@ A hang can be turned into a crash dump: `d2test` with `D2SERVER` aborts itself a
   that runs `cmd //c gradle.bat` (the build silently does nothing).
 - When two phones are attached, always pass `adb -s <serial>`.
 
-## Fixed seed in the app
+## Reference seed
 
-`adb -s <device> shell am start -n pl.d2port/.GameActivity --ei seed 777` starts the app's game with
-seed 777 (same camp and Blood Moor as the d2test reference run). With "Bieg", "→ poziom 2 (dev)" and
-then "→ potwór (dev)" the hero reaches the Fallen packs and kills them (the helper attacks within 4
-subtiles, skips monsters it gets stuck walking to, and explores the level otherwise). "Atak" (bottom
-right), held, attacks the nearest monster within 5 subtiles.
+The game seed is the 2nd argument of `d2test`; the test fixes it with `GAME_SetInitSeed`. Seed
+**777** is the reference: a Fallen pack near the Blood Moor entrance, hero life 55 → 51 on first
+contact. Some seeds (e.g. 1234) never reach the gate: the 90-subtile planning radius of the route
+helper is too small for that camp layout.
+
+The app takes the same seed from an intent extra:
+
+```bash
+adb -s <device> shell am start -n pl.d2port/.GameActivity --ei seed 777
+```
+
+Then "Bieg" (run), "→ poziom 2 (dev)" and "→ potwór (dev)" take the hero to the Fallen packs and
+kill them (the helper attacks within 4 subtiles, skips monsters it gets stuck walking to, and
+explores otherwise). "Atak" (bottom right), held, attacks the nearest monster within 5 subtiles.
 
 ## Asserts
 
-`FOG_DisplayAssert` (fog_android.cpp) logs and then traps, so an assert leaves a tombstone whose
-stack `srv.sh`-style addr2line runs can symbolise (D2 code would `exit(-1)` right after it anyway).
-After frame 1300 the D2EXIT test stops hunting and picks up the loot nearby, printing gold and the
-number of inventory items. With `D2DEATH=1` the hero's life is set to 1 at the first attack; the test
-waits for PLRMODE_DEAD, sends packet 0x41 and checks the hero is back in the camp with full life.
+`FOG_DisplayAssert` (`fog_android.cpp`) logs and then traps, so an assert leaves a tombstone whose
+stack can be symbolised with `llvm-addr2line` as above (D2 code would `exit(-1)` right after it
+anyway).
+
+## Commit messages
+
+Imperative subject of at most 72 characters with an area prefix (`game:`, `render:`, `ui:`,
+`d2moo:`, `d2test:`, `docs:`), one change per commit, and a body saying why and how it was checked
+(seed, d2test switch, device). A `d2moo:` commit also adds a row to D2MOO-CHANGES.md. Polish UI
+words get their English meaning, e.g. "Pick up (Podnieś) button".

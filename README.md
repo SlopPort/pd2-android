@@ -12,17 +12,22 @@ the same 25 game frames per second, the same animations — not a remake.
 
 ## What works (October 2026)
 
-- D2Common: tables (PD2's own `.bin` files), map generation (DRLG) for Act I, collision.
-- D2Game, the real game server, runs in the app: a single-player game is created the way the
-  1.10 client did it, through an in-memory replacement of D2Net (no network).
-- The hero walks/runs by sending the original client commands (packets 0x01/0x03) — speed,
-  pathing and animation all come from the game code. Camp objects and NPCs are spawned and moved
-  by D2Game.
-- Graphics: DT1 tiles and COF/DCC units are decoded by our own code and drawn in depth order.
-- Virtual stick modelled on PD2's gamepad scheme (point in stick direction, command every 5 frames).
+- **Data:** D2Common tables (PD2's own `.bin` files), Act I map generation (DRLG), collision.
+- **Server:** D2Game, the real game server, runs inside the app. A single-player game is created
+  the way the 1.10 client did it, through an in-memory replacement of D2Net (no network).
+- **Movement:** the hero walks/runs by sending the original client commands (packets 0x01/0x03);
+  speed, pathing and animation come from the game code. Levels are crossed seamlessly (town to
+  Blood Moor on foot).
+- **Monsters and combat:** monsters are spawned and driven by D2Game's AI. The hero attacks
+  (packet 0x06), kills Fallen packs, picks up gold and items (0x13), and dies and revives in town
+  (0x41).
+- **Graphics:** DT1 tiles, COF/DCC units and DC6 images are decoded by our own code and drawn in
+  depth order, with client-side walk/idle animation of monsters and objects.
+- **UI:** automap minimap, life/mana globes, items on the ground, an inventory panel (view only),
+  a virtual stick modelled on PD2's gamepad scheme. The app's buttons are labelled in Polish.
 
-Not done yet: automap, combat and monsters outside town, HUD, items/inventory UI, NPC dialogs,
-quests, sound, saving. See [docs/ROADMAP.md](docs/ROADMAP.md).
+Not done yet: moving items, belt and skill bar, NPC interaction, quests, sound, saving, Acts II-V.
+See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
 
