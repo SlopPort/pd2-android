@@ -15,7 +15,8 @@
 - **Items:** ground items drawn from `items.txt` flippy DC6 (last frame); pick-up with packet
   0x13 (gold and items verified in d2test). In the inventory panel a tap takes an item to the
   cursor (0x19, 0x1C) and a second tap places it (0x18), equips or swaps it (0x1A, 0x1D) or drops it
-  outside the panel (0x17); checked on the phone.
+  outside the panel (0x17); checked on the phone. The belt's first row is shown at the bottom;
+  a tap drinks the potion (0x26; life 10 -> 55 over 3 s in d2test).
 - **Death:** hero death and revival in town with packet 0x41 (d2test with `D2DEATH=1`).
 - **HUD:** life/mana globes from `hlthmana.dc6`; inventory panel ("Ekwipunek") with the layout
   from `inventory.txt` (800x600 rows), PD2's panel as `invchar6.dc6` frames 4-7, items from their
@@ -27,7 +28,7 @@
 
 ## Next
 
-1. **Items** — belt (potions from the belt, packet 0x26), item tooltips.
+1. **Items** — full belt rows, item tooltips.
 2. **HUD** — the rest of the control panel: skill buttons, stats.
 3. **Combat** — other skills and attack packets (0x05-0x11), hit recovery visuals, missiles.
 4. **Automap polish** — D2Client also reveals by line of sight and draws level names, exits and

@@ -181,6 +181,14 @@ int main(int argc, char** argv) {
 								break;
 							}
 							(void)show;
+							// Belt: drink a healing potion (0x26) with life set low.
+							for (const InvItem& it : inv) if (it.mode == 2) {
+								sgame_debug_set_life(10);
+								printf("  0x26: drink %s, life %d\n", it.file.c_str(), sgame_player_life());
+								sgame_item_command(0x26, it.guid, 0, 0, 0);
+								for (int k = 0; k < 75; ++k) { usleep(40000); sgame_tick(); if (k % 25 == 24) printf("  life after %d frames: %d\n", k + 1, sgame_player_life()); }
+								break;
+							}
 						}
 						if (best >= 0) sgame_interact(4, best);
 						route.clear();

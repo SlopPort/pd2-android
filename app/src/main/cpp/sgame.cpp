@@ -377,7 +377,7 @@ bool sgame_inventory_layout(int* out) {
 // Item moves as the client sends them (packet layouts from D2Game's handlers in PlrMsg.cpp):
 // 0x19 take from a page to the cursor, 0x18 put the cursor item at x,y of a page, 0x1A equip the
 // cursor item, 0x1D swap it with the equipped one, 0x1C take an equipped item to the cursor,
-// 0x17 drop the cursor item on the ground.
+// 0x17 drop the cursor item on the ground, 0x26 use (drink) an item from the belt.
 void sgame_item_command(int nCommand, int nGuid, int a, int b, int c) {
 	if (!sgame_ready()) return;
 	uint8_t p[17] = {(uint8_t)nCommand};
@@ -387,6 +387,7 @@ void sgame_item_command(int nCommand, int nGuid, int a, int b, int c) {
 	case 0x17: case 0x19: put32(1, nGuid); n = 5; break;
 	case 0x18: put32(1, nGuid); put32(5, a); put32(9, b); put32(13, c); n = 17; break;
 	case 0x1A: case 0x1D: put32(1, nGuid); put32(5, a); n = 9; break;
+	case 0x26: put32(1, nGuid); put32(5, a); put32(9, 0); n = 13; break; // use belt item (a: on mercenary)
 	case 0x1C: { uint16_t loc = (uint16_t)a; memcpy(p + 1, &loc, 2); n = 3; break; }
 	default: return;
 	}

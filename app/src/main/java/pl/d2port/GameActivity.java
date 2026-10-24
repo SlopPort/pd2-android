@@ -41,6 +41,7 @@ public final class GameActivity extends Activity {
     private Stick stick;
     private volatile boolean attackHeld, pickRequested, inventoryOpen;
     private InventoryView inventory;
+    private BeltView belt;
     private boolean deadShown;
     private final Looks looks = new Looks();
     // Shared by the game thread (fills) and the UI thread (draws).
@@ -57,6 +58,8 @@ public final class GameActivity extends Activity {
         root.addView(view);
         stick = new Stick(this);
         root.addView(stick);
+        belt = new BeltView(this);
+        root.addView(belt);
         inventory = new InventoryView(this);
         inventory.setVisibility(View.GONE);
         root.addView(inventory);
@@ -199,6 +202,7 @@ public final class GameActivity extends Activity {
             if (frame % 25 == 5) automap.update(act);
             if (frame % 5 == 0) view.vitals = D2Native.serverVitals();
             if (inventoryOpen) { inventory.handleTap(); if (frame % 5 == 0) inventory.update(); }
+            if (frame % 5 == 2) belt.update();
         } catch (RuntimeException ex) {
             android.util.Log.e("D2Native", "frame", ex);
         }

@@ -26,7 +26,7 @@ the same 25 game frames per second, the same animations — not a remake.
 - **UI:** automap minimap, life/mana globes, items on the ground, an inventory panel where items can be moved, equipped and dropped,
   a virtual stick modelled on PD2's gamepad scheme. The app's buttons are labelled in Polish.
 
-Not done yet: belt and skill bar, NPC interaction, quests, sound, saving, Acts II-V.
+Not done yet: skill bar, NPC interaction, quests, sound, saving, Acts II-V.
 See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Documentation
