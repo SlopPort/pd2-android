@@ -176,7 +176,7 @@ public final class GameActivity extends Activity {
             LevelView.Sprite hero = sprite(0, 0, hx, hy, s[5], s[7]);
             if (hero != null) list.add(hero);
             int[] u = D2Native.serverUnits();
-            for (int i = 0; i + 7 < u.length; i += 8) {
+            for (int i = 0; i + 12 < u.length; i += 13) {
                 if (u[i] == 4) { // items: only those lying on the ground, drawn with the last flippy frame
                     if (Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]) > 60) continue;
                     LevelView.Sprite g = groundItem(u[i + 2], u[i + 3] + 0.5f, u[i + 4] + 0.5f);
@@ -185,7 +185,9 @@ public final class GameActivity extends Activity {
                 }
                 // Only units near the hero (a screen and a half).
                 if (Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]) > 60) continue;
-                LevelView.Sprite sp = sprite(u[i], u[i + 2], u[i + 3] + 0.5f, u[i + 4] + 0.5f, u[i + 6], u[i + 7]);
+                boolean monster = u[i] == 1;
+                LevelView.Sprite sp = sprite(u[i], u[i + 2], u[i + 8] / 65536f, u[i + 9] / 65536f,
+                        monster ? u[i + 10] : u[i + 6], monster ? clientFrame(u[i + 2], u[i + 5], u[i + 11], u[i + 12]) : u[i + 7]);
                 if (sp != null) list.add(sp);
             }
             view.sprites = list.toArray(new LevelView.Sprite[0]);
@@ -204,7 +206,7 @@ public final class GameActivity extends Activity {
     /** Index in serverUnits() of the nearest living hostile monster (not town NPCs 146-179), or -1. */
     private int nearestMonster(int[] u, int[] s, int[] distOut) {
         int best = -1, bestD = Integer.MAX_VALUE;
-        for (int i = 0; i + 7 < u.length; i += 8) {
+        for (int i = 0; i + 12 < u.length; i += 13) {
             // Monster modes 0 (death) and 12 (dead).
             if (u[i] != 1 || (u[i + 1] >= 146 && u[i + 1] <= 179) || u[i + 5] == 0 || u[i + 5] == 12) continue;
             if (unreachable.contains(u[i + 2])) continue;
@@ -219,7 +221,7 @@ public final class GameActivity extends Activity {
     private void pickNearest(int reach) {
         int[] s = D2Native.serverPlayer(), u = D2Native.serverUnits();
         int best = -1, bestD = reach + 1;
-        for (int i = 0; i + 7 < u.length; i += 8) {
+        for (int i = 0; i + 12 < u.length; i += 13) {
             if (u[i] != 4) continue;
             int d = Math.abs(u[i + 3] - s[0]) + Math.abs(u[i + 4] - s[1]);
             if (d < bestD && D2Native.groundItemFile(u[i + 2]) != null) { bestD = d; best = i; }
@@ -288,6 +290,25 @@ public final class GameActivity extends Activity {
             flippies.put(file, f);
         }
         return f[0] == null ? null : new LevelView.Sprite(x, y, (android.graphics.Bitmap) f[0], (int) f[1], (int) f[2]);
+    }
+
+    /** Client-side animation per monster guid: {mode, frame (8.8)}. */
+    private final java.util.Map<Integer, int[]> monsterAnims = new java.util.HashMap<>();
+
+    /**
+     * Animation frame of a monster as D2Client keeps it: the server sets the mode, rate and length
+     * (wAnimSpeed, dwFrameCountPrecise, 8.8 fixed) but does not step walking/idle frames itself;
+     * like D2Common's UNITS_StopSequence (#10373) the frame grows by the rate each game frame and wraps.
+     */
+    private int clientFrame(int guid, int mode, int speed, int count) {
+        int[] a = monsterAnims.get(guid);
+        if (a == null || a[0] != mode) { a = new int[]{mode, 0}; monsterAnims.put(guid, a); }
+        else if (count > 0) {
+            a[1] += speed;
+            if (mode == 0) a[1] = Math.min(a[1], count - 1); // death (DT) plays once, then the server sets DD
+            else while (a[1] >= count) a[1] -= count;
+        }
+        return a[1] >> 8;
     }
 
     private LevelView.Sprite sprite(int type, int guid, float x, float y, int dir64, int frame) {

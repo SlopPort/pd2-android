@@ -115,6 +115,7 @@ void sgame_player_state(int* out) {
 }
 
 int sgame_units(std::vector<int>& out) {
+	const size_t kUnitInts = 13;
 	out.clear();
 	withGame([&](D2GameStrc* pGame) {
 		D2UnitStrc* me = player(pGame);
@@ -124,14 +125,24 @@ int sgame_units(std::vector<int>& out) {
 					if (u == me || u->dwUnitType == UNIT_MISSILE) continue;
 					D2CoordStrc c = {};
 					UNITS_GetCoords(u, &c);
-					int dir = u->pDynamicPath ? PATH_GetDirection(u->pDynamicPath) : 0;
+					// pDynamicPath and pStaticPath share one union: objects and items have a static path.
+					const bool dynamic = u->pDynamicPath && u->dwUnitType != UNIT_OBJECT && u->dwUnitType != UNIT_ITEM;
+					int dir = dynamic || (u->pStaticPath && (u->dwUnitType == UNIT_OBJECT || u->dwUnitType == UNIT_ITEM)) ? UNITS_GetDirection(u) : 0;
 					int frame = 0, frames = 0;
 					UNITS_GetFrameMetrics(u, &frame, &frames);
 					out.push_back((int)u->dwUnitType); out.push_back(u->dwClassId); out.push_back((int)u->dwUnitId);
 					out.push_back(c.nX); out.push_back(c.nY); out.push_back((int)u->dwAnimMode); out.push_back(dir); out.push_back(frame);
+					// Sub-subtile position (16.16) for drawing, as for the hero; static units sit on their subtile.
+					out.push_back(dynamic ? PATH_GetPrecisionX(u->pDynamicPath) : (c.nX << 16) + 0x8000); // centre of the subtile
+					out.push_back(dynamic ? PATH_GetPrecisionY(u->pDynamicPath) : (c.nY << 16) + 0x8000);
+					// For client-side animation (D2Client advances these itself): the direction the
+					// unit is turning to, and the animation rate and length, both 8.8 fixed point.
+					out.push_back(dynamic ? PATH_GetNewDirection(u->pDynamicPath) : dir);
+					out.push_back(u->wAnimSpeed);
+					out.push_back(u->dwFrameCountPrecise);
 				}
 	});
-	return (int)out.size() / 8;
+	return (int)out.size() / kUnitInts;
 }
 
 #include <D2Composit.h>

@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
 		printf("player at %d,%d level %d mode %d\n", s[0], s[1], s[6], s[4]);
 		std::vector<int> units;
 		printf("units: %d\n", sgame_units(units));
-		for (size_t i = 0; i + 7 < units.size() && i < 8 * 40; i += 8)
+		for (size_t i = 0; i + 12 < units.size() && i < 13 * 40; i += 13)
 			printf("  type %d class %d at %d,%d mode %d\n", units[i], units[i + 1], units[i + 3], units[i + 4], units[i + 5]);
 		int waited = 0;
 		while (!sgame_ready() && waited < 100) { usleep(40000); sgame_tick(); ++waited; }
@@ -91,6 +91,19 @@ int main(int argc, char** argv) {
 			sgame_tick();
 			sgame_player_state(s);
 			if (f % 10 == 0) printf("frame %d: %d,%d mode %d\n", f, s[0], s[1], s[4]);
+		}
+		if (getenv("D2NPC")) {
+			// Town NPCs (monstats 146-179): mode, animation frame and precise position over time.
+			for (int f = 0; f < 150; ++f) {
+				usleep(40000);
+				sgame_tick();
+				sgame_units(units);
+				for (size_t i = 0; i + 12 < units.size(); i += 13)
+					if (units[i] == 1 && units[i + 1] >= 146 && units[i + 1] <= 179 && units[i + 5] != 1 && f % 3 == 0) {
+						printf("npc %d class %d mode %d frame %d dir %d at %d,%d precise %.2f,%.2f newdir %d speed %d count %d\n", f, units[i + 1], units[i + 5], units[i + 7], units[i + 6], units[i + 3], units[i + 4], units[i + 8] / 65536.0, units[i + 9] / 65536.0, units[i + 10], units[i + 11], units[i + 12]);
+						break;
+					}
+			}
 		}
 		if (getenv("D2EXIT")) {
 			// Walk out of the camp: target = centre of the first Blood Moor room touching a camp room.
@@ -124,7 +137,7 @@ int main(int argc, char** argv) {
 						// After the first fights: pick up the loot nearby (packet 0x13, D2Game walks there).
 						sgame_units(units);
 						int best = -1, nGround = 0; long bestD = 31;
-						for (size_t i = 0; i + 7 < units.size(); i += 8) {
+						for (size_t i = 0; i + 12 < units.size(); i += 13) {
 							if (units[i] != 4 || sgame_ground_item_file(units[i + 2]).empty()) continue;
 							long d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
 							if (d < 31) ++nGround;
@@ -148,7 +161,7 @@ int main(int argc, char** argv) {
 						sgame_units(units);
 						long bestD = 1L << 30;
 						target = -1;
-						for (size_t i = 0; i + 7 < units.size(); i += 8) {
+						for (size_t i = 0; i + 12 < units.size(); i += 13) {
 							// Alive only: monster modes 0 (death) and 12 (dead) are skipped.
 							if (units[i] != 1 || (units[i + 1] >= 146 && units[i + 1] <= 179) || units[i + 5] == 0 || units[i + 5] == 12) continue;
 							long d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
@@ -187,7 +200,7 @@ int main(int argc, char** argv) {
 				if (lastLevel == 2 && f % 125 == 0) {
 					sgame_units(units);
 					int nNear = 0;
-					for (size_t i = 0; i + 7 < units.size(); i += 8) {
+					for (size_t i = 0; i + 12 < units.size(); i += 13) {
 						if (units[i] != 1) continue;
 						int d = std::abs(units[i + 3] - s[0]) + std::abs(units[i + 4] - s[1]);
 						if (d < 60 && nNear == 0 && f % 250 == 0 && !(units[i + 1] >= 146 && units[i + 1] <= 179)) {
@@ -220,7 +233,7 @@ int main(int argc, char** argv) {
 			}
 			printf("camp: %d active rooms, %d monster presets, %d spawned\n", nActive, nMon, nMonSpawned);
 		}
-		for (size_t i = 0; i + 7 < units.size(); i += 8)
+		for (size_t i = 0; i + 12 < units.size(); i += 13)
 			if (units[i] != 4) printf("  type %d class %d at %d,%d mode %d\n", units[i], units[i + 1], units[i + 3], units[i + 4], units[i + 5]);
 		return 0;
 	}
