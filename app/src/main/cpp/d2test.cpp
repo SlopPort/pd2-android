@@ -155,6 +155,32 @@ int main(int argc, char** argv) {
 							std::vector<InvItem> inv;
 							sgame_inventory(inv);
 							for (const InvItem& it : inv) printf("  item %s page %d body %d at %d,%d size %dx%d\n", it.file.c_str(), it.page, it.bodyLoc, it.x, it.y, it.w, it.h);
+							// Item moves: grid item to cursor and back; right-hand weapon off and on.
+							auto settle = [&]() { for (int k = 0; k < 5; ++k) { usleep(40000); sgame_tick(); } };
+							auto show = [&](const char* what) {
+								std::vector<InvItem> v;
+								sgame_inventory(v);
+								for (const InvItem& it : v) if (it.mode == 4 || it.guid == inv[0].guid) printf("  %s: %s mode %d page %d body %d at %d,%d\n", what, it.file.c_str(), it.mode, it.page, it.bodyLoc, it.x, it.y);
+							};
+							for (const InvItem& it : inv) if (it.page == 0) {
+								sgame_item_command(0x19, it.guid, 0, 0, 0); settle();
+								std::vector<InvItem> v; sgame_inventory(v);
+								for (const InvItem& c : v) if (c.mode == 4) printf("  0x19: %s on cursor\n", c.file.c_str());
+								sgame_item_command(0x18, it.guid, it.x, it.y, 0); settle();
+								sgame_inventory(v);
+								for (const InvItem& c : v) if (c.guid == it.guid) printf("  0x18: %s back at page %d %d,%d mode %d\n", c.file.c_str(), c.page, c.x, c.y, c.mode);
+								break;
+							}
+							for (const InvItem& it : inv) if (it.page == 255 && it.bodyLoc == 4) {
+								sgame_item_command(0x1C, 0, 4, 0, 0); settle();
+								std::vector<InvItem> v; sgame_inventory(v);
+								for (const InvItem& c : v) if (c.guid == it.guid) printf("  0x1C: %s mode %d body %d\n", c.file.c_str(), c.mode, c.bodyLoc);
+								sgame_item_command(0x1A, it.guid, 4, 0, 0); settle();
+								sgame_inventory(v);
+								for (const InvItem& c : v) if (c.guid == it.guid) printf("  0x1A: %s mode %d body %d\n", c.file.c_str(), c.mode, c.bodyLoc);
+								break;
+							}
+							(void)show;
 						}
 						if (best >= 0) sgame_interact(4, best);
 						route.clear();

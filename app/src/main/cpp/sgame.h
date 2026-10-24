@@ -45,8 +45,11 @@ void sgame_resurrect();
 void sgame_debug_set_life(int nLife);
 
 // One item of the hero's inventory (see sgame_inventory).
-struct InvItem { std::string file; int page, bodyLoc, x, y, w, h; };
+struct InvItem { std::string file; int page, bodyLoc, x, y, w, h, guid, mode; };
 #include <vector>
 void sgame_inventory(std::vector<InvItem>& out);
 // Inventory panel layout (800x600) from inventory.txt; out has 72 ints (see sgame.cpp).
 bool sgame_inventory_layout(int* out);
+
+// Item moves (0x17/0x18/0x19/0x1A/0x1C/0x1D), see sgame.cpp.
+void sgame_item_command(int nCommand, int nGuid, int a, int b, int c);
